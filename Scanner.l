@@ -16,8 +16,8 @@
 #include "y.tab.h"
 
 int line_count=1;
-int error_count=0;
-int warning_count=0;
+extern int error_count;
+extern int warning_count;
 
 extern FILE *logout;
 // FILE *tokenout;
@@ -33,7 +33,7 @@ std::string stringToken;
 bool multiLineString = false;
 int startLine;
 
-SymbolTable symbolTable(10);
+// SymbolTable symbolTable(10);
 
 char *toUpper(char *s){
     int n = strlen(s);
@@ -69,20 +69,49 @@ SUFFIX_PREFIX {NUMERIC}[a-zA-Z_][a-zA-Z0-9_]*
 %%
 {WHITESPACE} {}
 int {
+    SymbolInfo *tmp = new SymbolInfo(yytext, "INT");
+    tmp->leftPart = "INT";
+    tmp->rightPart = "int";
+    tmp->isLeaf = true;
+    tmp->startLine = line_count;
+    tmp->endLine = line_count;
+    yylval.symbol = tmp;
     fprintf(logout, "Line# %d: Token <INT> Lexeme int found\n", line_count);
     return INT;
 }
 float {
+    SymbolInfo *tmp = new SymbolInfo(yytext, "FLOAT");
+    tmp->leftPart = "FLOAT";
+    tmp->rightPart = "float";
+    tmp->isLeaf = true;
+    tmp->startLine = line_count;
+    tmp->endLine = line_count;
+    yylval.symbol = tmp;
     fprintf(logout, "Line# %d: Token <FLOAT> Lexeme float found\n", line_count);
     return FLOAT;
 }
 void {
+    SymbolInfo *tmp = new SymbolInfo(yytext, "VOID");
+    tmp->leftPart = "VOID";
+    tmp->rightPart = "void";
+    tmp->isLeaf = true;
+    tmp->startLine = line_count;
+    tmp->endLine = line_count;
+    yylval.symbol = tmp;
     fprintf(logout, "Line# %d: Token <VOID> Lexeme void found\n", line_count);
     return VOID;
 }
 {CONST_INT} {
     // fprintf(tokenout,"<CONST_INT, %s>\n", yytext);
-    fprintf(logout, "Line# %d: Token <CONST_INT> Lexeme %s found\n", line_count, yytext);    
+    SymbolInfo *tmp = new SymbolInfo(yytext, "CONST_INT");
+    tmp->leftPart = "CONST_INT";
+    tmp->rightPart = yytext;
+    tmp->isLeaf = true;
+    tmp->startLine = line_count;
+    tmp->endLine = line_count;
+    yylval.symbol = tmp;
+    fprintf(logout, "Line# %d: Token <CONST_INT> Lexeme %s found\n", line_count, yytext);
+    return CONST_INT;    
 }
 {CONST_FLOAT} {
     // fprintf(tokenout,"<CONST_FLOAT, %s>\n", yytext);
@@ -219,37 +248,67 @@ void {
 "{" {
     // fprintf(tokenout,"<LCURL, %s>\n", yytext);
     fprintf(logout, "Line# %d: Token <LCURL> Lexeme %s found\n", line_count, yytext);
-    symbolTable.enterScope();
+    // symbolTable.enterScope();
     scopeCounter++;
 }
 
 "}" {
     // fprintf(tokenout,"<RCURL, %s>\n", yytext);
     fprintf(logout, "Line# %d: Token <RCURL> Lexeme %s found\n", line_count, yytext);
-    symbolTable.exitScope();
+    // symbolTable.exitScope();
     scopeCounter--;
     // symbolTable.printAllScopeTableInFile(logout);
 }
 
 "[" {
+    SymbolInfo *tmp = new SymbolInfo(yytext, "LSQUARE");
+    tmp->leftPart = "LSQUARE";
+    tmp->rightPart = "[";
+    tmp->isLeaf = true;
+    tmp->startLine = line_count;
+    tmp->endLine = line_count;
+    yylval.symbol = tmp;
     // fprintf(tokenout,"<LSQUARE, %s>\n", yytext);
     fprintf(logout, "Line# %d: Token <LSQUARE> Lexeme %s found\n", line_count, yytext);
+    return LSQUARE;
 
 }
 
 "]" {
+    SymbolInfo *tmp = new SymbolInfo(yytext, "RSQUARE");
+    tmp->leftPart = "RSQUARE";
+    tmp->rightPart = "]";
+    tmp->isLeaf = true;
+    tmp->startLine = line_count;
+    tmp->endLine = line_count;
+    yylval.symbol = tmp;
     // fprintf(tokenout,"<RSQUARE, %s>\n", yytext);
     fprintf(logout, "Line# %d: Token <RSQUARE> Lexeme %s found\n", line_count, yytext);
+    return RSQUARE;
 }
 
 "," {
     // fprintf(tokenout,"<COMMA, %s>\n", yytext);
+    SymbolInfo *tmp = new SymbolInfo(yytext, "COMMA");
+    tmp->leftPart = "COMMA";
+    tmp->rightPart = ",";
+    tmp->isLeaf = true;
+    tmp->startLine = line_count;
+    tmp->endLine = line_count;
+    yylval.symbol = tmp;
     fprintf(logout, "Line# %d: Token <COMMA> Lexeme %s found\n", line_count, yytext);
     return COMMA;
 }
 
 ";" {
     // fprintf(tokenout,"<SEMICOLON, %s>\n", yytext);
+    SymbolInfo *tmp = new SymbolInfo(yytext, "SEMICOLON");
+    tmp->leftPart = "SEMICOLON";
+    tmp->rightPart = ";";
+    tmp->isLeaf = true;
+    tmp->startLine = line_count;
+    tmp->endLine = line_count;
+    yylval.symbol = tmp;
     fprintf(logout, "Line# %d: Token <SEMICOLON> Lexeme %s found\n", line_count, yytext);
     return SEMICOLON;
 }
@@ -258,6 +317,11 @@ void {
     // bool tmp = symbolTable.insert(yytext, "ID");
     // fprintf(tokenout,"<ID, %s>\n", yytext);
     SymbolInfo *tmp = new SymbolInfo(yytext, "ID");
+    tmp->leftPart = "ID";
+    tmp->rightPart = yytext;
+    tmp->isLeaf = true;
+    tmp->startLine = line_count;
+    tmp->endLine = line_count;
     yylval.symbol = tmp;
     fprintf(logout, "Line# %d: Token <ID> Lexeme %s found\n", line_count, yytext);
     // if(!tmp){

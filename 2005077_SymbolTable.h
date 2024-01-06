@@ -6,22 +6,51 @@ class SymbolInfo
 {
     string name;
     string type;
-
+    int flag; // 0 for variable, 1 for array, 2 for function,
+              // 3 for ParseTree Memeber
 public:
     SymbolInfo *next;
 
-    string leftPart;  // Parse Tree: Defines the left part of the production rule used
-    string rightPart; // Parse Tree: Defines the right part of the production rule used
-    int startLine;    // The starting line
-    int endline;      // The ending line
-    bool isLeaf;      // To know if it is leaf or not
-    int depth;        // For printing the spaces in the parse Tree
+    SymbolInfo *children; // For the parse Tree childrens
+    string leftPart;      // Parse Tree: Defines the left part of the production rule used
+    string rightPart;     // Parse Tree: Defines the right part of the production rule used
+    int startLine;        // The starting line
+    int endLine;          // The ending line
+    bool isLeaf;          // To know if it is leaf or not
+    int depth;            // For printing the spaces in the parse Tree
 
+    int arraySize; // For array
     SymbolInfo(string name = "", string type = "", SymbolInfo *next = NULL)
     {
         this->name = name;
         this->type = type;
         this->next = next;
+        flag = 3;
+    }
+
+    SymbolInfo(string name, string type, int flag)
+    {
+        this->name = name;
+        this->type = type;
+        this->flag = flag;
+        next = NULL;
+    }
+    static SymbolInfo *getVariableSymbol(string name, string type)
+    {
+        SymbolInfo *tmp = new SymbolInfo(name, type, 0);
+        return tmp;
+    }
+
+    static SymbolInfo *getArrayTypeSymbol(string name, string type, int arraySize)
+    {
+        SymbolInfo *tmp = new SymbolInfo(name, type, 1);
+        tmp->arraySize = arraySize;
+        return tmp;
+    }
+
+    int getFlag()
+    {
+        return flag;
     }
 
     string getName()
@@ -158,19 +187,33 @@ public:
         return NULL;
     }
 
-    bool insert(string name, string type, bool print = false)
+    bool insert(string name, string type, int flag, SymbolInfo *data = NULL)
     {
+        SymbolInfo *newElement = NULL;
+        if (flag == 0)
+        {
+            newElement = SymbolInfo::getVariableSymbol(name, type);
+        }
+        else if (flag == 1)
+        {
+            if (data == NULL)
+            {
+                printf("Error: Array size not given\n");
+                return false;
+            }
+            newElement = SymbolInfo::getArrayTypeSymbol(name, type, data->arraySize);
+        }
+        else
+        {
+            printf("Error: Invalid flag\n");
+            return false;
+        }
         int index = hash(name); // %totalBuckets is being done inside the hash function
 
         int i = 1;
         if (table[index] == NULL)
         {
-            table[index] = new SymbolInfo(name, type);
-            if (print)
-            {
-                cout << "\tInserted  at position <" << index + 1 << ", "
-                     << i << "> of ScopeTable# " << id << endl;
-            }
+            table[index] = newElement;
             return true;
         }
 
@@ -179,20 +222,11 @@ public:
         {
             if (tmp->getName() == name)
             {
-                if (print)
-                {
-                    cout << "\t\'" << name << "\' already exists in the current ScopeTable# " << id << endl;
-                }
                 return false;
             }
             if (tmp->getNext() == NULL)
             {
-                tmp->setNext(new SymbolInfo(name, type));
-                if (print)
-                {
-                    cout << "\tInserted  at position <" << index + 1 << ", "
-                         << ++i << "> of ScopeTable# " << id << endl;
-                }
+                tmp->setNext(newElement);
                 return true;
             }
             tmp = tmp->getNext();
@@ -276,7 +310,14 @@ public:
             SymbolInfo *tmp = table[i];
             while (tmp)
             {
-                fprintf(file, " --> (%s,%s)", tmp->getName().c_str(), tmp->getType().c_str());
+                if (tmp->getFlag() == 0)
+                {
+                    fprintf(file, " --> (%s,%s)", tmp->getName().c_str(), tmp->getType().c_str());
+                }
+                else if (tmp->getFlag() == 1)
+                {
+                    fprintf(file, " --> (%s,%s,%d)", tmp->getName().c_str(), tmp->getType().c_str(), tmp->arraySize);
+                }
                 tmp = tmp->getNext();
             }
             fprintf(file, "\n");
@@ -355,9 +396,10 @@ public:
         delete (tmp);
     }
 
-    bool insert(string name, string type, bool print = false)
+    // Extra data are passed via a SymbolInfo pointer
+    bool insert(string name, string type, int flag, SymbolInfo *data = NULL)
     {
-        return cur->insert(name, type, print);
+        return cur->insert(name, type, flag, data);
     }
 
     bool remove(string name, bool print = false)
@@ -413,5 +455,49 @@ public:
             tmp->printInFile(file);
             tmp = tmp->parentScope;
         }
+    }
+};
+
+class LinkedList
+{
+
+public:
+    SymbolInfo *head;
+    SymbolInfo *tail;
+    int length;
+
+    LinkedList()
+    {
+        head = NULL;
+        tail = NULL;
+        length = 0;
+    }
+    void insert(SymbolInfo *s)
+    {
+        if (head == NULL)
+        {
+            head = s;
+            tail = s;
+        }
+        else
+        {
+            tail->next = s;
+            tail = s;
+        }
+        length++;
+    }
+
+    void clear()
+    {
+        SymbolInfo *temp = head;
+        while (temp != NULL)
+        {
+            SymbolInfo *temp2 = temp;
+            temp = temp->next;
+            delete temp2;
+        }
+        head = NULL;
+        tail = NULL;
+        length = 0;
     }
 };
