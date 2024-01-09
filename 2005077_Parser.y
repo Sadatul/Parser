@@ -45,6 +45,18 @@ void printParseTree(SymbolInfo *root, int level){
 	}
 }
 
+void freeParseTree(SymbolInfo *root){
+	if(root == NULL){
+		return;
+	}
+	SymbolInfo *tmp = root->children;
+	while(tmp != NULL){
+		freeParseTree(tmp);
+		tmp = tmp->next;
+	}
+	delete root;
+}
+
 %}
 
 %union {
@@ -66,6 +78,7 @@ start : program
 		$$ = tmp;
 		fprintf(logout, "start : program\n");
 		printParseTree($$, 0);
+		freeParseTree($$);
 	  }
       ;
 program : program unit 
@@ -158,7 +171,7 @@ func_declaration : type_specifier ID LPAREN parameter_list RPAREN SEMICOLON
 						tmp2->isDefined = false;
 						SymbolInfo *cur = params.head;
 						while(cur != NULL){
-							tmp2->params.insert(SymbolInfo::getVariableSymbol(cur->getName(), cur->getType()));
+							tmp2->params->insert(SymbolInfo::getVariableSymbol(cur->getName(), cur->getType()));
 							cur = cur->next;
 						}
 						symbolTable->insert(tmp2);

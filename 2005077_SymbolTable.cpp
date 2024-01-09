@@ -6,6 +6,7 @@ SymbolInfo::SymbolInfo(string name, string type, SymbolInfo *next)
     this->type = type;
     this->next = next;
     flag = 3;
+    children = NULL;
 }
 
 SymbolInfo::SymbolInfo(string name, string type, int flag)
@@ -14,6 +15,19 @@ SymbolInfo::SymbolInfo(string name, string type, int flag)
     this->type = type;
     this->flag = flag;
     next = NULL;
+    children = NULL;
+    if (flag == 2)
+    {
+        params = new LinkedList();
+    }
+}
+
+SymbolInfo::~SymbolInfo()
+{
+    if (flag == 2)
+    {
+        delete params;
+    }
 }
 SymbolInfo *SymbolInfo::getVariableSymbol(string name, string type)
 {
@@ -317,7 +331,7 @@ void ScopeTable::printInFile(FILE *file)
             else if (tmp->getFlag() == 2)
             {
                 string s = "";
-                SymbolInfo *tmp1 = tmp->params.head;
+                SymbolInfo *tmp1 = tmp->params->head;
                 while (tmp1)
                 {
                     s += tmp1->getType();
@@ -466,6 +480,11 @@ LinkedList::LinkedList()
     head = NULL;
     tail = NULL;
     length = 0;
+}
+
+LinkedList::~LinkedList()
+{
+    clear();
 }
 void LinkedList::insert(SymbolInfo *s)
 {

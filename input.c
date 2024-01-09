@@ -1,2 +1,2 @@
 int a(int);
-int a();
+int b, c[10];

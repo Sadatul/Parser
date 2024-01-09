@@ -11,6 +11,7 @@ public:
     int length;
 
     LinkedList();
+    ~LinkedList();
     void insert(SymbolInfo *s);
     void clear();
 };
@@ -24,7 +25,7 @@ class SymbolInfo
 public:
     SymbolInfo *next;
 
-    LinkedList params;
+    LinkedList *params;
     bool isDefined;
     bool isDeclared;
 
@@ -39,6 +40,7 @@ public:
     int arraySize; // For array
     SymbolInfo(string name = "", string type = "", SymbolInfo *next = NULL);
     SymbolInfo(string name, string type, int flag);
+    ~SymbolInfo();
     static SymbolInfo *getVariableSymbol(string name, string type);
     static SymbolInfo *getArrayTypeSymbol(string name, string type, int arraySize);
     int getFlag();
