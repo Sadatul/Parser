@@ -22,7 +22,10 @@ echo 'Generated the scanner.cpp file.'
 g++ -w -c -o ./bin/scanner.o ./bin/scanner.cpp
 echo 'Generated the scanner object file.'
 
-g++ ./bin/parser.o ./bin/scanner.o -lfl -o ./bin/compiler
+g++ -w -c -o ./bin/header.o 2005077_SymbolTable.cpp
+echo 'Generated the header object file.'
+
+g++ ./bin/parser.o ./bin/scanner.o ./bin/header.o -lfl -o ./bin/compiler
 echo 'compiler generated'
 
 mkdir -p output

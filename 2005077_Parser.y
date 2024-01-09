@@ -2,7 +2,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include "2005077_SymbolTable.h"
-
 void yyerror(char *s){
 	
 }
@@ -23,6 +22,7 @@ extern FILE* yyin;
 // For keeping track of all the variables
 SymbolTable *symbolTable;
 LinkedList vars;
+LinkedList params;
 
 void printParseTree(SymbolInfo *root, int level){
 	if(root == NULL){
@@ -51,8 +51,9 @@ void printParseTree(SymbolInfo *root, int level){
     SymbolInfo *symbol;
 }
 
-%token <symbol> INT, FLOAT, VOID, SEMICOLON, COMMA, ID, LSQUARE, CONST_INT, RSQUARE
-%type <symbol> start program unit var_declaration type_specifier declaration_list
+%token <symbol> INT, FLOAT, VOID, SEMICOLON, COMMA, ID, LSQUARE, CONST_INT, RSQUARE, LPAREN, RPAREN, LCURL, RCURL
+%type <symbol> start program unit var_declaration type_specifier declaration_list func_declaration func_definition parameter_list compound_statement statements statement
+
 %%
 start : program
 	  {
@@ -95,17 +96,235 @@ program : program unit
 		}
         ;
 unit : var_declaration
-			 {
-				SymbolInfo *tmp = new SymbolInfo("unit", "unit");
-				tmp->leftPart = "unit";
-				tmp->rightPart = "var_declaration";
-				tmp->startLine = $1->startLine;
-				tmp->endLine = $1->endLine;
-				tmp->children = $1;
-				$$ = tmp;
-				fprintf(logout, "unit : var_declaration\n");
-			 }
-        	 ;
+	 {
+		SymbolInfo *tmp = new SymbolInfo("unit", "unit");
+		tmp->leftPart = "unit";
+		tmp->rightPart = "var_declaration";
+		tmp->startLine = $1->startLine;
+		tmp->endLine = $1->endLine;
+		tmp->children = $1;
+		$$ = tmp;
+		fprintf(logout, "unit : var_declaration\n");
+	 }
+	 |
+	 func_declaration
+	 {
+		SymbolInfo *tmp = new SymbolInfo("unit", "unit");
+		tmp->leftPart = "unit";
+		tmp->rightPart = "func_declaration";
+		tmp->startLine = $1->startLine;
+		tmp->endLine = $1->endLine;
+		tmp->children = $1;
+		$$ = tmp;
+		fprintf(logout, "unit : func_declaration\n");
+	 }
+	 |
+	 func_definition
+	 {
+
+	 }
+	 ;
+
+func_declaration : type_specifier ID LPAREN parameter_list RPAREN SEMICOLON
+				 {
+					SymbolInfo *tmp = new SymbolInfo("func_declaration", "func_declaration");
+					tmp->leftPart = "func_declaration";
+					tmp->rightPart = "type_specifier ID LPAREN parameter_list RPAREN SEMICOLON";
+					tmp->startLine = $1->startLine;
+					tmp->endLine = $6->endLine;
+					$$ = tmp;
+
+					$1->next = $2;
+					$2->next = $3;
+					$3->next = $4;
+					$4->next = $5;
+					$5->next = $6;
+					$6->next = NULL;
+					$$->children = $1;
+
+					SymbolInfo *tmp1 = symbolTable->lookUp($2->getName());
+					if(tmp1 != NULL){
+						if(tmp1->getFlag() != 2){
+							error_count++;
+							fprintf(errorout, "Line# %d: Redeclared as different kind of symbol %s\n", $1->startLine, $2->getName().c_str());
+						}
+						else{
+							error_count++;
+							fprintf(errorout, "Line# %d: Multiple Declaration of function \'%s\'\n", $1->startLine, $2->getName().c_str());
+						}
+					}
+					else {
+						SymbolInfo *tmp2 = new SymbolInfo($2->getName(), $1->getName(), 2);
+						tmp2->isDefined = false;
+						SymbolInfo *cur = params.head;
+						while(cur != NULL){
+							tmp2->params.insert(SymbolInfo::getVariableSymbol(cur->getName(), cur->getType()));
+							cur = cur->next;
+						}
+						symbolTable->insert(tmp2);
+					}
+					params.clear();
+					symbolTable->printAllScopeTableInFile(logout);
+				 }
+				 |
+				 type_specifier ID LPAREN RPAREN SEMICOLON
+				 {
+					SymbolInfo *tmp = new SymbolInfo("func_declaration", "func_declaration");
+					tmp->leftPart = "func_declaration";
+					tmp->rightPart = "type_specifier ID LPAREN RPAREN SEMICOLON";
+					tmp->startLine = $1->startLine;
+					tmp->endLine = $5->endLine;
+					$$ = tmp;
+
+					$1->next = $2;
+					$2->next = $3;
+					$3->next = $4;
+					$4->next = $5;
+					$5->next = NULL;
+					$$->children = $1;
+
+					SymbolInfo *tmp1 = symbolTable->lookUp($2->getName());
+					if(tmp1 != NULL){
+						if(tmp1->getFlag() != 2){
+							error_count++;
+							fprintf(errorout, "Line# %d: Redeclared as different kind of symbol %s\n", $1->startLine, $2->getName().c_str());
+						}
+						else{
+							error_count++;
+							fprintf(errorout, "Line# %d: Multiple Declaration of function \'%s\'\n", $1->startLine, $2->getName().c_str());
+						}
+					}
+					else {
+						SymbolInfo *tmp2 = new SymbolInfo($2->getName(), $1->getName(), 2);
+						tmp2->isDefined = false;
+						symbolTable->insert(tmp2);
+					}
+					symbolTable->printAllScopeTableInFile(logout);
+				 }
+				 ;
+
+func_definition : type_specifier ID LPAREN parameter_list RPAREN compound_statement
+				{
+
+				}
+				|
+				type_specifier ID LPAREN RPAREN compound_statement
+				{
+
+				}
+				;
+parameter_list : parameter_list COMMA type_specifier ID
+				{
+					SymbolInfo *tmp = new SymbolInfo("parameter_list", "parameter_list");
+    				tmp->leftPart = "parameter_list";
+					tmp->rightPart = "parameter_list COMMA type_specifier ID";
+					tmp->startLine = $1->startLine;
+					tmp->endLine = $4->endLine;
+					$$ = tmp;
+
+					$1->next = $2;
+					$2->next = $3;
+					$3->next = $4;
+					$4->next = NULL;
+					$$->children = $1;
+
+					SymbolInfo *cur = params.head;
+					bool errorFlag = false;
+					while(cur != NULL){
+						if(cur->getName() == $4->getName()){
+							errorFlag = true;
+							break;
+						}
+						cur = cur->next;
+					}
+					if(errorFlag){
+						error_count++;
+						fprintf(errorout, "Line# %d: Multiple declaration of %s\n", $4->startLine, $4->getName().c_str());
+						
+					} else {
+						params.insert(SymbolInfo::getVariableSymbol($4->getName(), $3->getName()));
+					}
+					fprintf(logout, "parameter_list : parameter_list COMMA type_specifier ID\n");
+				}
+				|
+				parameter_list COMMA type_specifier
+				{
+					SymbolInfo *tmp = new SymbolInfo("parameter_list", "parameter_list");
+    				tmp->leftPart = "parameter_list";
+					tmp->rightPart = "parameter_list COMMA type_specifier";
+					tmp->startLine = $1->startLine;
+					tmp->endLine = $3->endLine;
+					$$ = tmp;
+
+					$1->next = $2;
+					$2->next = $3;
+					$3->next = NULL;
+					$$->children = $1;
+
+					params.insert(SymbolInfo::getVariableSymbol("", $3->getName()));
+					fprintf(logout, "parameter_list : parameter_list COMMA type_specifier\n");
+				}
+				|
+				type_specifier ID
+				{
+					SymbolInfo *tmp = new SymbolInfo("parameter_list", "parameter_list");
+    				tmp->leftPart = "parameter_list";
+					tmp->rightPart = "type_specifier ID";
+					tmp->startLine = $1->startLine;
+					tmp->endLine = $2->endLine;
+					$$ = tmp;
+
+					$1->next = $2;
+					$2->next = NULL;
+					$$->children = $1;
+
+					params.insert(SymbolInfo::getVariableSymbol($2->getName(), $1->getName()));
+					fprintf(logout, "parameter_list : type_specifier ID\n");
+				}
+				|
+				type_specifier
+				{
+					SymbolInfo *tmp = new SymbolInfo("parameter_list", "parameter_list");
+    				tmp->leftPart = "parameter_list";
+					tmp->rightPart = "type_specifier";
+					tmp->startLine = $1->startLine;
+					tmp->endLine = $1->endLine;
+					$$ = tmp;
+
+					$1->next = NULL;
+					$$->children = $1;
+
+					params.insert(SymbolInfo::getVariableSymbol("", $1->getName()));
+					fprintf(logout, "parameter_list : type_specifier\n");
+				}
+				;
+compound_statement : LCURL statements RCURL
+				   {
+
+				   }
+				   |
+				   LCURL RCURL
+				   {
+
+				   }
+				   ;
+
+statements : statement
+		   {
+
+		   }
+		   |
+		   statements statement
+		   {
+
+		   }
+		   ;
+
+statement : var_declaration
+		  {
+
+		  }
+		  ;
 var_declaration : type_specifier declaration_list SEMICOLON
 				{
 					SymbolInfo *tmp = new SymbolInfo("var_declaration", "var_declaration");

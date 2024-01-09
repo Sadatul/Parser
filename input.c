@@ -1,1 +1,2 @@
-int a[2],c,i,j ; float d;
+int a(int);
+int a();

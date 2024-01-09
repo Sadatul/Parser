@@ -236,27 +236,59 @@ void {
 }
 
 "(" {
+    SymbolInfo *tmp = new SymbolInfo(yytext, "LPAREN");
+    tmp->leftPart = "LPAREN";
+    tmp->rightPart = "(";
+    tmp->isLeaf = true;
+    tmp->startLine = line_count;
+    tmp->endLine = line_count;
+    yylval.symbol = tmp;
     // fprintf(tokenout,"<LPAREN, %s>\n", yytext);
     fprintf(logout, "Line# %d: Token <LPAREN> Lexeme %s found\n", line_count, yytext);
+    return LPAREN;
 }
 
 ")" {
+    SymbolInfo *tmp = new SymbolInfo(yytext, "RPAREN");
+    tmp->leftPart = "RPAREN";
+    tmp->rightPart = ")";
+    tmp->isLeaf = true;
+    tmp->startLine = line_count;
+    tmp->endLine = line_count;
+    yylval.symbol = tmp;
     // fprintf(tokenout,"<RPAREN, %s>\n", yytext);
     fprintf(logout, "Line# %d: Token <RPAREN> Lexeme %s found\n", line_count, yytext);
+    return RPAREN;
 }
 
 "{" {
+    SymbolInfo *tmp = new SymbolInfo(yytext, "LCURL");
+    tmp->leftPart = "LCURL";
+    tmp->rightPart = "{";
+    tmp->isLeaf = true;
+    tmp->startLine = line_count;
+    tmp->endLine = line_count;
+    yylval.symbol = tmp;
     // fprintf(tokenout,"<LCURL, %s>\n", yytext);
     fprintf(logout, "Line# %d: Token <LCURL> Lexeme %s found\n", line_count, yytext);
     // symbolTable.enterScope();
     scopeCounter++;
+    return LCURL;
 }
 
 "}" {
+    SymbolInfo *tmp = new SymbolInfo(yytext, "RCURL");
+    tmp->leftPart = "RCURL";
+    tmp->rightPart = "}";
+    tmp->isLeaf = true;
+    tmp->startLine = line_count;
+    tmp->endLine = line_count;
+    yylval.symbol = tmp;
     // fprintf(tokenout,"<RCURL, %s>\n", yytext);
     fprintf(logout, "Line# %d: Token <RCURL> Lexeme %s found\n", line_count, yytext);
     // symbolTable.exitScope();
     scopeCounter--;
+    return RCURL;
     // symbolTable.printAllScopeTableInFile(logout);
 }
 
