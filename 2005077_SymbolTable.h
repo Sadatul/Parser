@@ -14,6 +14,7 @@ public:
     ~LinkedList();
     void insert(SymbolInfo *s);
     void clear();
+    int getLength();
 };
 
 class SymbolInfo

@@ -15,7 +15,7 @@
 #include<iostream>
 #include "y.tab.h"
 
-int line_count=1;
+extern int line_count;
 extern int error_count;
 extern int warning_count;
 

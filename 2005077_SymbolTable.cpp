@@ -514,3 +514,8 @@ void LinkedList::clear()
     tail = NULL;
     length = 0;
 }
+
+int LinkedList::getLength()
+{
+    return length;
+}

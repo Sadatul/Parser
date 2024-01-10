@@ -2,14 +2,12 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include "2005077_SymbolTable.h"
-void yyerror(char *s){
-	
-}
+
 
 void changeState();
 int yylex(void);
 
-
+int line_count=1;
 int error_count = 0;
 int warning_count = 0;
 
@@ -23,6 +21,22 @@ extern FILE* yyin;
 SymbolTable *symbolTable;
 LinkedList vars;
 LinkedList params;
+
+void yyerror(char *s){
+	error_count++;
+	fprintf(errorout, "Line# %d: %s\n", line_count, s);	
+}
+
+void addFunction(string name, string type, bool isDefined){
+	SymbolInfo *tmp2 = new SymbolInfo(name, type, 2);
+	tmp2->isDefined = isDefined;
+	SymbolInfo *cur = params.head;
+	while(cur != NULL){
+		tmp2->params->insert(SymbolInfo::getVariableSymbol(cur->getName(), cur->getType()));
+		cur = cur->next;
+	}
+	symbolTable->insert(tmp2);
+}
 
 void printParseTree(SymbolInfo *root, int level){
 	if(root == NULL){
@@ -134,7 +148,14 @@ unit : var_declaration
 	 |
 	 func_definition
 	 {
-
+		SymbolInfo *tmp = new SymbolInfo("unit", "unit");
+		tmp->leftPart = "unit";
+		tmp->rightPart = "func_definition";
+		tmp->startLine = $1->startLine;
+		tmp->endLine = $1->endLine;
+		tmp->children = $1;
+		$$ = tmp;
+		fprintf(logout, "unit : func_definition\n");
 	 }
 	 ;
 
@@ -154,6 +175,7 @@ func_declaration : type_specifier ID LPAREN parameter_list RPAREN SEMICOLON
 					$5->next = $6;
 					$6->next = NULL;
 					$$->children = $1;
+					fprintf(logout, "func_declaration : type_specifier ID LPAREN parameter_list RPAREN SEMICOLON\n");
 
 					SymbolInfo *tmp1 = symbolTable->lookUp($2->getName());
 					if(tmp1 != NULL){
@@ -195,6 +217,7 @@ func_declaration : type_specifier ID LPAREN parameter_list RPAREN SEMICOLON
 					$4->next = $5;
 					$5->next = NULL;
 					$$->children = $1;
+					fprintf(logout, "func_declaration : type_specifier ID LPAREN RPAREN SEMICOLON\n");
 
 					SymbolInfo *tmp1 = symbolTable->lookUp($2->getName());
 					if(tmp1 != NULL){
@@ -216,14 +239,146 @@ func_declaration : type_specifier ID LPAREN parameter_list RPAREN SEMICOLON
 				 }
 				 ;
 
-func_definition : type_specifier ID LPAREN parameter_list RPAREN compound_statement
+func_definition : type_specifier ID LPAREN parameter_list RPAREN 
 				{
+					string name = $2->getName();
+					string type = $1->getName();
+					
+					SymbolInfo *func = symbolTable->lookUp(name);
+					if(func == NULL){
+						addFunction(name, type, true);
+					}
+					else if(func->getFlag() == 2){
+						if(func->isDefined){
+							error_count++;
+							fprintf(errorout, "Line# %d: Redifination of function \'%s\'\n", $1->startLine, name.c_str());
+						}
+						else {
+							// so function is declared but not defined
+							// Now we will check all the if the return type and parameters are the same.
+							if(func->getType() == type){
+								if(func->params->getLength() == params.getLength())
+								{
+									// Paramcount matched
+									bool errorFlag = false;
 
+									SymbolInfo *funcCur = func->params->head;
+									SymbolInfo *paramCur = params.head;
+									while(funcCur != NULL){
+										if(funcCur->getType() != paramCur->getType()){
+											errorFlag = true;
+											break;
+										}
+										funcCur = funcCur->next;
+										paramCur = paramCur->next;
+									}
+									
+									if(errorFlag){
+										error_count++;
+										fprintf(errorout, "Line# %d: Conflicting(ParamType) types for \'%s\'\n", $1->startLine, name.c_str());
+									}
+									else {
+										func->isDefined = true;
+										// Changed the function parameters names.
+										SymbolInfo *funcCur = func->params->head;
+										SymbolInfo *paramCur = params.head;
+										while(funcCur != NULL){
+											funcCur->setName(paramCur->getName());
+											funcCur = funcCur->next;
+											paramCur = paramCur->next;
+										}
+										
+									}
+								}
+								else {
+									error_count++;
+									fprintf(errorout, "Line# %d: Conflicting(ParamCount) types for \'%s\'\n", $1->startLine, name.c_str());
+								}
+							}
+							else {
+								error_count++;
+								// Return value doesn't match with already declared function.
+								fprintf(errorout, "Line# %d: Conflicting types for \'%s\'\n", $1->startLine, name.c_str());
+							}
+						}
+					}
+					else {
+						error_count++;
+						fprintf(errorout, "Line# %d: \'%s\' redeclared as different kind of symbol\n", $1->startLine, name.c_str());
+					}
+				}
+				compound_statement
+				{
+					SymbolInfo *tmp = new SymbolInfo("func_definition", "func_definition");
+					tmp->leftPart = "func_definition";
+					tmp->rightPart = "type_specifier ID LPAREN parameter_list RPAREN compound_statement";
+					tmp->startLine = $1->startLine;
+					tmp->endLine = $7->endLine;
+					$$ = tmp;
+
+					$1->next = $2;
+					$2->next = $3;
+					$3->next = $4;
+					$4->next = $5;
+					$5->next = $7;
+					$7->next = NULL;
+					$$->children = $1;
+					fprintf(logout, "func_definition : type_specifier ID LPAREN parameter_list RPAREN compound_statement\n");
 				}
 				|
-				type_specifier ID LPAREN RPAREN compound_statement
+				type_specifier ID LPAREN RPAREN
 				{
+					string name = $2->getName();
+					string type = $1->getName();
+					
+					SymbolInfo *func = symbolTable->lookUp(name);
+					if(func == NULL){
+						addFunction(name, type, true);
+					}
+					else if(func->getFlag() == 2){
+						if(func->isDefined){
+							error_count++;
+							fprintf(errorout, "Line# %d: Redifination of function \'%s\'\n", $1->startLine, name.c_str());
+						}
+						else {
+							// so function is declared but not defined
+							// Now we will check all the if the return type and parameters are the same.
+							if(func->getType() != type){
+								error_count++;
+								// Return value doesn't match with already declared function.
+								fprintf(errorout, "Line# %d: Conflicting types for \'%s\'\n", $1->startLine, name.c_str());
+							}
+							else if(func->params->getLength() != params.getLength() && params.getLength() == 0)
+							{	
+								error_count++;
+								fprintf(errorout, "Line# %d: Conflicting(ParamCount) types for \'%s\'\n", $1->startLine, name.c_str());
+							}
+							else {
+								func->isDefined = true;
+							}
+						}
+					}
+					else {
+						error_count++;
+						fprintf(errorout, "Line# %d: \'%s\' redeclared as different kind of symbol\n", $1->startLine, name.c_str());
+					}
+				}
+				compound_statement
+				{
+					SymbolInfo *tmp = new SymbolInfo("func_definition", "func_definition");
+					tmp->leftPart = "func_definition";
+					tmp->rightPart = "type_specifier ID LPAREN RPAREN compound_statement";
+					tmp->startLine = $1->startLine;
+					tmp->endLine = $6->endLine;
+					$$ = tmp;
 
+					$1->next = $2;
+					$2->next = $3;
+					$3->next = $4;
+					$4->next = $6;
+					$6->next = NULL;
+					$$->children = $1;
+					fprintf(logout, "func_definition : type_specifier ID LPAREN RPAREN compound_statement\n");
 				}
 				;
 parameter_list : parameter_list COMMA type_specifier ID
@@ -311,30 +466,95 @@ parameter_list : parameter_list COMMA type_specifier ID
 					fprintf(logout, "parameter_list : type_specifier\n");
 				}
 				;
-compound_statement : LCURL statements RCURL
+compound_statement : LCURL ENTER_SCOPE statements RCURL
 				   {
+						SymbolInfo *tmp = new SymbolInfo("compound_statement", "compound_statement");
+						tmp->leftPart = "compound_statement";
+						tmp->rightPart = "LCURL statements RCURL";
+						tmp->startLine = $1->startLine;
+						tmp->endLine = $4->endLine;
+						$$ = tmp;
 
+						$1->next = $3;
+						$3->next = $4;
+						$4->next = NULL;
+						$$->children = $1;
+						fprintf(logout, "compound_statement : LCURL statements RCURL\n");
+
+						symbolTable->printAllScopeTableInFile(logout);
+						symbolTable->exitScope();
 				   }
 				   |
-				   LCURL RCURL
+				   LCURL ENTER_SCOPE RCURL
 				   {
+						SymbolInfo *tmp = new SymbolInfo("compound_statement", "compound_statement");
+						tmp->leftPart = "compound_statement";
+						tmp->rightPart = "LCURL RCURL";
+						tmp->startLine = $1->startLine;
+						tmp->endLine = $3->endLine;
+						$$ = tmp;
 
+						$1->next = $3;
+						$3->next = NULL;
+						$$->children = $1;
+						fprintf(logout, "compound_statement : LCURL RCURL\n");
+
+						symbolTable->printAllScopeTableInFile(logout);
+						symbolTable->exitScope();
 				   }
 				   ;
 
+ENTER_SCOPE :
+			{
+				symbolTable->enterScope();
+				SymbolInfo *tmp = params.head;
+				while(tmp != NULL){
+					symbolTable->insert(tmp->getName(), tmp->getType(), 0);
+					tmp = tmp->next;
+				}
+				params.clear();
+				// printf("Cleared Params\n");
+			}
+
 statements : statement
 		   {
-
+				SymbolInfo *tmp = new SymbolInfo("statements", "statements");
+				tmp->leftPart = "statements";
+				tmp->rightPart = "statement";
+				tmp->startLine = $1->startLine;
+				tmp->endLine = $1->endLine;
+				tmp->children = $1;
+				$$ = tmp;
+				fprintf(logout, "statements : statement\n");
 		   }
 		   |
 		   statements statement
 		   {
+				SymbolInfo *tmp = new SymbolInfo("statements", "statements");
+				tmp->leftPart = "statements";
+				tmp->rightPart = "statements statement";
+				tmp->startLine = $1->startLine;
+				tmp->endLine = $2->endLine;
+				$$ = tmp;
 
+				$1->next = $2;
+				$2->next = NULL;
+				$$->children = $1;
+
+				fprintf(logout, "statements statement\n");
 		   }
 		   ;
 
 statement : var_declaration
 		  {
+			SymbolInfo *tmp = new SymbolInfo("statement", "statement");
+			tmp->leftPart = "statement";
+			tmp->rightPart = "var_declaration";
+			tmp->startLine = $1->startLine;
+			tmp->endLine = $1->endLine;
+			tmp->children = $1;
+			$$ = tmp;
+			fprintf(logout, "statement : var_declaration\n");
 
 		  }
 		  ;

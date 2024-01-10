@@ -1,2 +1,5 @@
-int a(int);
-int b, c[10];
+int a();
+int a(int a, int b)
+{
+ int b, c[10];
+}
