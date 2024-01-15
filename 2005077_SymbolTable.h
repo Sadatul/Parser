@@ -22,13 +22,17 @@ class SymbolInfo
     string name;
     string type; // For functions return type is saved here..
     int flag;    // 0 for variable, 1 for array, 2 for function,
-                 // 3 for ParseTree Memeber
+                 // 3 for ParseTree Memeber. Some parse tree members also need to be identified as
+                 // variable, array or function. For that purpose this flag is used.
 public:
     SymbolInfo *next;
 
     LinkedList *params;
     bool isDefined;
     bool isDeclared;
+
+    string dType; // Some symbols like factor, expression requires a extra data type.
+                  // This is used for that purpose.
 
     SymbolInfo *children; // For the parse Tree childrens
     string leftPart;      // Parse Tree: Defines the left part of the production rule used
@@ -45,6 +49,7 @@ public:
     static SymbolInfo *getVariableSymbol(string name, string type);
     static SymbolInfo *getArrayTypeSymbol(string name, string type, int arraySize);
     int getFlag();
+    void setFlag(int flag);
     string getName();
     void setName(string name);
     string getType();

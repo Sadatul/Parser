@@ -47,6 +47,11 @@ int SymbolInfo::getFlag()
     return flag;
 }
 
+void SymbolInfo::setFlag(int flag)
+{
+    this->flag = flag;
+}
+
 string SymbolInfo::getName()
 {
     return name;
@@ -315,9 +320,12 @@ void ScopeTable::printInFile(FILE *file)
     fprintf(file, "\tScopeTable# %s\n", id.c_str());
     for (int i = 0; i < totalBuckets; i++)
     {
-        fprintf(file, "\t%d", i + 1);
-
         SymbolInfo *tmp = table[i];
+        if (tmp == NULL)
+        {
+            continue;
+        }
+        fprintf(file, "\t%d", i + 1);
         while (tmp)
         {
             if (tmp->getFlag() == 0)

@@ -101,6 +101,20 @@ void {
     fprintf(logout, "Line# %d: Token <VOID> Lexeme void found\n", line_count);
     return VOID;
 }
+
+return {
+    SymbolInfo *tmp = new SymbolInfo(yytext, "RETURN");
+    tmp->leftPart = "RETURN";
+    tmp->rightPart = "return";
+    tmp->isLeaf = true;
+    tmp->startLine = line_count;
+    tmp->endLine = line_count;
+    yylval.symbol = tmp;
+
+    fprintf(logout, "Line# %d: Token <RETURN> Lexeme return found\n", line_count);
+    return RETURN;
+
+}
 {CONST_INT} {
     // fprintf(tokenout,"<CONST_INT, %s>\n", yytext);
     SymbolInfo *tmp = new SymbolInfo(yytext, "CONST_INT");
@@ -114,8 +128,16 @@ void {
     return CONST_INT;    
 }
 {CONST_FLOAT} {
+    SymbolInfo *tmp = new SymbolInfo(yytext, "CONST_FLOAT");
+    tmp->leftPart = "CONST_FLOAT";
+    tmp->rightPart = yytext;
+    tmp->isLeaf = true;
+    tmp->startLine = line_count;
+    tmp->endLine = line_count;
+    yylval.symbol = tmp;
     // fprintf(tokenout,"<CONST_FLOAT, %s>\n", yytext);
     fprintf(logout, "Line# %d: Token <CONST_FLOAT> Lexeme %s found\n", line_count, yytext);
+    return CONST_FLOAT;
 }
 {MULTI_DOT} {
     fprintf(logout,"Error at line# %d: TOO_MANY_DECIMAL_POINTS %s\n",line_count, yytext);
@@ -197,37 +219,106 @@ void {
 }
 
 "+"|"-" {
+    SymbolInfo *tmp = new SymbolInfo(yytext, "ADDOP");
+    tmp->leftPart = "ADDOP";
+    tmp->rightPart = yytext;
+    tmp->isLeaf = true;
+    tmp->startLine = line_count;
+    tmp->endLine = line_count;
+    yylval.symbol = tmp;
     // fprintf(tokenout,"<ADDOP, %s>\n", yytext);
     fprintf(logout, "Line# %d: Token <ADDOP> Lexeme %s found\n", line_count, yytext);
+    return ADDOP;
 }
 
 "*"|"/"|"%" {
+    SymbolInfo *tmp = new SymbolInfo(yytext, "MULOP");
+    tmp->leftPart = "MULOP";
+    tmp->rightPart = yytext;
+    tmp->isLeaf = true;
+    tmp->startLine = line_count;
+    tmp->endLine = line_count;
+    yylval.symbol = tmp;
     // fprintf(tokenout,"<MULOP, %s>\n", yytext);
     fprintf(logout, "Line# %d: Token <MULOP> Lexeme %s found\n", line_count, yytext);
+    return MULOP;
 }
 
-"++"|"--" {
+"++" {
+    SymbolInfo *tmp = new SymbolInfo(yytext, "INCOP");
+    tmp->leftPart = "INCOP";
+    tmp->rightPart = yytext;
+    tmp->isLeaf = true;
+    tmp->startLine = line_count;
+    tmp->endLine = line_count;
+    yylval.symbol = tmp;
     // fprintf(tokenout,"<INCOP, %s>\n", yytext);
     fprintf(logout, "Line# %d: Token <INCOP> Lexeme %s found\n", line_count, yytext);
+    return INCOP;
+}
+
+"--" {
+    SymbolInfo *tmp = new SymbolInfo(yytext, "DECOP");
+    tmp->leftPart = "DECOP";
+    tmp->rightPart = yytext;
+    tmp->isLeaf = true;
+    tmp->startLine = line_count;
+    tmp->endLine = line_count;
+    // fprintf(tokenout,"<DECOP, %s>\n", yytext);
+    fprintf(logout, "Line# %d: Token <DECOP> Lexeme %s found\n", line_count, yytext);
+    return DECOP;
+
 }
 "<"|">"|"<="|">="|"=="|"!=" {
+    SymbolInfo *tmp = new SymbolInfo(yytext, "RELOP");
+    tmp->leftPart = "RELOP";
+    tmp->rightPart = yytext;
+    tmp->isLeaf = true;
+    tmp->startLine = line_count;
+    tmp->endLine = line_count;
+    yylval.symbol = tmp;
     // fprintf(tokenout,"<RELOP, %s>\n", yytext);
     fprintf(logout, "Line# %d: Token <RELOP> Lexeme %s found\n", line_count, yytext);
+    return RELOP;
 }
 
 "=" {
+    SymbolInfo *tmp = new SymbolInfo(yytext, "ASSIGNOP");
+    tmp->leftPart = "ASSIGNOP";
+    tmp->rightPart = "=";
+    tmp->isLeaf = true;
+    tmp->startLine = line_count;
+    tmp->endLine = line_count;
+    yylval.symbol = tmp;
     // fprintf(tokenout,"<ASSIGNOP, %s>\n", yytext);
     fprintf(logout, "Line# %d: Token <ASSIGNOP> Lexeme %s found\n", line_count, yytext);
+    return ASSIGNOP;
 }
 
 "&&"|"||" {
+    SymbolInfo *tmp = new SymbolInfo(yytext, "LOGICOP");
+    tmp->leftPart = "LOGICOP";
+    tmp->rightPart = yytext;
+    tmp->isLeaf = true;
+    tmp->startLine = line_count;
+    tmp->endLine = line_count;
+    yylval.symbol = tmp;
     // fprintf(tokenout,"<LOGICOP, %s>\n", yytext);
     fprintf(logout, "Line# %d: Token <LOGICOP> Lexeme %s found\n", line_count, yytext);
+    return LOGICOP;
 }
 
 "!" {
+    SymbolInfo *tmp = new SymbolInfo(yytext, "NOT");
+    tmp->leftPart = "NOT";
+    tmp->rightPart = yytext;
+    tmp->isLeaf = true;
+    tmp->startLine = line_count;
+    tmp->endLine = line_count;
+    yylval.symbol = tmp;
     // fprintf(tokenout,"<NOT, %s>\n", yytext);
     fprintf(logout, "Line# %d: Token <NOT> Lexeme %s found\n", line_count, yytext);
+    return NOT;
 }
 
 "&"|"|"|"^"|"<<"|">>" {
