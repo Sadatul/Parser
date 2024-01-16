@@ -25,6 +25,15 @@ LinkedList args;
 string funcReturnType = ""; // This is used to keep track of the return type of the function during definition.
 					// We match this in the return statement to check if the return type is correct or not.
 					// Remember after end of definition we need to reset this to empty string.
+
+// Our log file shows that functions added after definition is complete.
+// But the way we coded before....addded the function to the symbolTable right after
+// the declaration part before..compound statements have been checked.
+// So, now to match the logfile, we keep a flag callAddfunction and based on this flag
+// add the function to the symbolTable after the compound statement is checked.
+string funcName = "";
+bool callAddFunction = false;
+
 void yyerror(char *s){
 	error_count++;
 	fprintf(errorout, "Line# %d: %s\n", line_count, s);	
@@ -249,12 +258,15 @@ func_definition : type_specifier ID LPAREN parameter_list RPAREN
 					// track of return type and match it when we 
 					// encounter return statement.
 					funcReturnType = type;
+					funcName = name;
 					
 					SymbolInfo *func = symbolTable->lookUp(name);
 					if(func == NULL){
-						addFunction(name, type, true);
+						// addFunction(name, type, true);
+						callAddFunction = true;
 					}
 					else if(func->getFlag() == 2){
+						callAddFunction = false;
 						if(func->isDefined){
 							error_count++;
 							fprintf(errorout, "Line# %d: Redifination of function \'%s\'\n", $1->startLine, name.c_str());
@@ -315,6 +327,10 @@ func_definition : type_specifier ID LPAREN parameter_list RPAREN
 				}
 				compound_statement
 				{
+					if(callAddFunction)
+					{
+						addFunction(funcName, funcReturnType, true);
+					}
 					SymbolInfo *tmp = new SymbolInfo("func_definition", "func_definition");
 					tmp->leftPart = "func_definition";
 					tmp->rightPart = "type_specifier ID LPAREN parameter_list RPAREN compound_statement";
@@ -334,6 +350,12 @@ func_definition : type_specifier ID LPAREN parameter_list RPAREN
 					// After finishing the definiation we reset th
 					// funcReturnType to empty string.
 					funcReturnType = "";
+
+					// Need to reset our flags and params.
+					callAddFunction = false;
+					funcName = "";
+					params.clear();
+
 				}
 				|
 				type_specifier ID LPAREN RPAREN
@@ -342,12 +364,15 @@ func_definition : type_specifier ID LPAREN parameter_list RPAREN
 					string type = $1->getName();
 					
 					funcReturnType = type;
+					funcName = name;
 
 					SymbolInfo *func = symbolTable->lookUp(name);
 					if(func == NULL){
-						addFunction(name, type, true);
+						// addFunction(name, type, true);
+						callAddFunction = true;
 					}
 					else if(func->getFlag() == 2){
+						callAddFunction = false;
 						if(func->isDefined){
 							error_count++;
 							fprintf(errorout, "Line# %d: Redifination of function \'%s\'\n", $1->startLine, name.c_str());
@@ -377,6 +402,10 @@ func_definition : type_specifier ID LPAREN parameter_list RPAREN
 				}
 				compound_statement
 				{
+					if(callAddFunction)
+					{
+						addFunction(funcName, funcReturnType, true);
+					}
 					SymbolInfo *tmp = new SymbolInfo("func_definition", "func_definition");
 					tmp->leftPart = "func_definition";
 					tmp->rightPart = "type_specifier ID LPAREN RPAREN compound_statement";
@@ -393,6 +422,9 @@ func_definition : type_specifier ID LPAREN parameter_list RPAREN
 					fprintf(logout, "func_definition : type_specifier ID LPAREN RPAREN compound_statement\n");
 
 					funcReturnType = "";
+					callAddFunction = false;
+					funcName = "";
+					params.clear();
 				}
 				;
 parameter_list : parameter_list COMMA type_specifier ID
@@ -526,7 +558,7 @@ ENTER_SCOPE :
 					symbolTable->insert(tmp->getName(), tmp->getType(), 0);
 					tmp = tmp->next;
 				}
-				params.clear();
+				// params.clear();
 				// printf("Cleared Params\n");
 			}
 

@@ -338,6 +338,8 @@ void ScopeTable::printInFile(FILE *file)
             }
             else if (tmp->getFlag() == 2)
             {
+                // For debugging params.
+
                 // string s = "";
                 // SymbolInfo *tmp1 = tmp->params->head;
                 // while (tmp1)
@@ -345,6 +347,9 @@ void ScopeTable::printInFile(FILE *file)
                 //     s += tmp1->getType();
                 //     tmp1 = tmp1->next;
                 // }
+                // fprintf(file, " <%s,FUNCTION%s,%s>", tmp->getName().c_str(),
+                //         s.c_str(), tmp->getType().c_str());
+
                 fprintf(file, " <%s,FUNCTION,%s>", tmp->getName().c_str(), tmp->getType().c_str());
             }
             tmp = tmp->getNext();
