@@ -88,8 +88,19 @@ void freeParseTree(SymbolInfo *root){
     SymbolInfo *symbol;
 }
 
-%token <symbol> INT, FLOAT, VOID, SEMICOLON, COMMA, ID, LSQUARE, CONST_INT, CONST_FLOAT, RSQUARE, LPAREN, RPAREN, LCURL, RCURL, ASSIGNOP, RELOP, LOGICOP, ADDOP, MULOP, NOT, INCOP, DECOP, RETURN
+%token <symbol> INT, FLOAT, VOID, SEMICOLON, COMMA, ID, LSQUARE, CONST_INT, CONST_FLOAT, RSQUARE, LPAREN, RPAREN, LCURL, RCURL, ASSIGNOP, RELOP, LOGICOP, ADDOP, MULOP, NOT, INCOP, DECOP, RETURN, FOR, IF, ELSE, WHILE, PRINTLN
 %type <symbol> start program unit var_declaration type_specifier declaration_list func_declaration func_definition parameter_list compound_statement statements statement factor variable unary_expression term simple_expression rel_expression logic_expression expression expression_statement arguments argument_list
+
+%{
+	// LOWER_THAN_ELSE , a pseudo token, is used to resolve the dangling else problem.
+	// LOWER_THAN_ELSE has lower precedence than ELSE as it is defined earlier.
+	// %nonassoc means non associative but we are using this only to define
+	// precedence...associativity is not important here.	
+%}
+
+%nonassoc LOWER_THAN_ELSE
+%nonassoc ELSE
+
 %%
 start : program
 	  {
@@ -293,7 +304,7 @@ func_definition : type_specifier ID LPAREN parameter_list RPAREN
 									
 									if(errorFlag){
 										error_count++;
-										fprintf(errorout, "Line# %d: Conflicting(ParamType) types for \'%s\'\n", $1->startLine, name.c_str());
+										fprintf(errorout, "Line# %d: Conflicting types for \'%s\'\n", $1->startLine, name.c_str());
 									}
 									else {
 										func->isDefined = true;
@@ -310,7 +321,7 @@ func_definition : type_specifier ID LPAREN parameter_list RPAREN
 								}
 								else {
 									error_count++;
-									fprintf(errorout, "Line# %d: Conflicting(ParamCount) types for \'%s\'\n", $1->startLine, name.c_str());
+									fprintf(errorout, "Line# %d: Conflicting types for \'%s\'\n", $1->startLine, name.c_str());
 								}
 							}
 							else {
@@ -388,7 +399,7 @@ func_definition : type_specifier ID LPAREN parameter_list RPAREN
 							else if(func->params->getLength() != params.getLength() && params.getLength() == 0)
 							{	
 								error_count++;
-								fprintf(errorout, "Line# %d: Conflicting(ParamCount) types for \'%s\'\n", $1->startLine, name.c_str());
+								fprintf(errorout, "Line# %d: Conflicting types for '%s\'\n", $1->startLine, name.c_str());
 							}
 							else {
 								func->isDefined = true;
@@ -453,7 +464,7 @@ parameter_list : parameter_list COMMA type_specifier ID
 					}
 					if(errorFlag){
 						error_count++;
-						fprintf(errorout, "Line# %d: Multiple declaration of %s\n", $4->startLine, $4->getName().c_str());
+						fprintf(errorout, "Line# %d: Redefinition of parameter \'%s\'\n", $4->startLine, $4->getName().c_str());
 						
 					} else {
 						params.insert(SymbolInfo::getVariableSymbol($4->getName(), $3->getName()));
@@ -581,7 +592,7 @@ var_declaration : type_specifier declaration_list SEMICOLON
 					if($1->getName() == "VOID"){
 						error_count++;
 						string tempName = vars.head->getName();
-						fprintf(errorout, "Line %d: Variable or field \'%s\' declared void \n", $1->startLine, tempName.c_str());
+						fprintf(errorout, "Line# %d: Variable or field \'%s\' declared void\n", $1->startLine, tempName.c_str());
 					} else {
 						SymbolInfo *cur = vars.head;
 						while(cur != NULL){
@@ -591,7 +602,7 @@ var_declaration : type_specifier declaration_list SEMICOLON
 									error_count++;
 									SymbolInfo *tmp1 = symbolTable->lookUp(cur->getName());
 									if(tmp1->getType() != $1->getName()){
-										fprintf(errorout, "Line# %d: Conflicting types for \'%s\'\n", $1->startLine, cur->getName().c_str());
+										fprintf(errorout, "Line# %d: Conflicting types for\'%s\'\n", $1->startLine, cur->getName().c_str());
 									}
 									else{
 										fprintf(errorout, "Line# %d: Multiple declaration of %s\n", $1->startLine, cur->getName().c_str());
@@ -604,7 +615,7 @@ var_declaration : type_specifier declaration_list SEMICOLON
 									error_count++;
 									SymbolInfo *tmp1 = symbolTable->lookUp(cur->getName());
 									if(tmp1->getType() != $1->getName()){
-										fprintf(errorout, "Line# %d: Conflicting types for \'%s\'\n", $1->startLine, cur->getName().c_str());
+										fprintf(errorout, "Line# %d: Conflicting types for\'%s\'\n", $1->startLine, cur->getName().c_str());
 									}
 									else{
 										fprintf(errorout, "Line# %d: Multiple declaration of %s\n", $1->startLine, cur->getName().c_str());
@@ -783,6 +794,117 @@ statement : var_declaration
 			fprintf(logout, "statement : compound_statement \n");
 		  }
 		  |
+		  FOR LPAREN expression_statement expression_statement expression RPAREN statement
+		  {
+			SymbolInfo *tmp = new SymbolInfo("statement", "statement");
+			tmp->leftPart = "statement";
+			tmp->rightPart = "FOR LPAREN expression_statement expression_statement expression RPAREN statement";
+			tmp->startLine = $1->startLine;
+			tmp->endLine = $7->endLine;
+
+			$1->next = $2;
+			$2->next = $3;
+			$3->next = $4;
+			$4->next = $5;
+			$5->next = $6;
+			$6->next = $7;
+			$7->next = NULL;
+			tmp->children = $1;
+
+			$$ = tmp;
+			fprintf(logout, "statement : FOR LPAREN expression_statement expression_statement expression RPAREN statement \n");
+		  }
+		  |
+		  IF LPAREN expression RPAREN statement %prec LOWER_THAN_ELSE
+		  {
+			// %prec tells that this production has equal precedence to LOWER_THAN_ELSE
+			// which is lower than ELSE, which allows us to give precedence
+			// to shift operation rather than reduce.
+			SymbolInfo *tmp = new SymbolInfo("statement", "statement");
+			tmp->leftPart = "statement";
+			tmp->rightPart = "IF LPAREN expression RPAREN statement";
+			tmp->startLine = $1->startLine;
+			tmp->endLine = $5->endLine;
+
+			$1->next = $2;
+			$2->next = $3;
+			$3->next = $4;
+			$4->next = $5;
+			$5->next = NULL;
+
+			tmp->children = $1;
+			$$ = tmp;
+			fprintf(logout, "statement : IF LPAREN expression RPAREN statement \n");
+		  }
+		  |
+		  IF LPAREN expression RPAREN statement ELSE statement
+		  {
+			SymbolInfo *tmp = new SymbolInfo("statement", "statement");
+			tmp->leftPart = "statement";
+			tmp->rightPart = "IF LPAREN expression RPAREN statement ELSE statement";
+			tmp->startLine = $1->startLine;
+			tmp->endLine = $7->endLine;
+
+			$1->next = $2;
+			$2->next = $3;
+			$3->next = $4;
+			$4->next = $5;
+			$5->next = $6;
+			$6->next = $7;
+			$7->next = NULL;
+
+			tmp->children = $1;
+			$$ = tmp;
+			fprintf(logout, "statement : IF LPAREN expression RPAREN statement ELSE statement \n");
+		  }
+		  |
+		  WHILE LPAREN expression RPAREN statement
+		  {
+			SymbolInfo *tmp = new SymbolInfo("statement", "statement");
+			tmp->leftPart = "statement";
+			tmp->rightPart = "WHILE LPAREN expression RPAREN statement";
+			tmp->startLine = $1->startLine;
+			tmp->endLine = $5->endLine;
+
+			$1->next = $2;
+			$2->next = $3;
+			$3->next = $4;
+			$4->next = $5;
+			$5->next = NULL;
+
+			tmp->children = $1;
+			$$ = tmp;
+			fprintf(logout, "statement : WHILE LPAREN expression RPAREN statement \n");
+		  }
+		  |
+		  PRINTLN LPAREN ID RPAREN SEMICOLON
+		  {
+			SymbolInfo *tmp = new SymbolInfo("statement", "statement");
+			tmp->leftPart = "statement";
+			tmp->rightPart = "PRINTLN LPAREN ID RPAREN SEMICOLON";
+			tmp->startLine = $1->startLine;
+			tmp->endLine = $5->endLine;
+
+			$1->next = $2;
+			$2->next = $3;
+			$3->next = $4;
+			$4->next = $5;
+			$5->next = NULL;
+
+			tmp->children = $1;
+			$$ = tmp;
+			fprintf(logout, "statement : PRINTLN LPAREN ID RPAREN SEMICOLON \n");
+
+		  	SymbolInfo *check = symbolTable->lookUp($3->getName());
+			if(check == NULL){
+				error_count++;
+				fprintf(errorout, "Line# %d: Undeclared variable \'%s\'\n", $3->startLine, $3->getName().c_str());
+			} else if(check->getFlag() == 2){
+				error_count++;
+				fprintf(errorout, "Line# %d: \'%s\' is a function.\n", $3->startLine, $3->getName().c_str());
+			}
+		  }
+		  |
 		  RETURN expression SEMICOLON
 		  {
 			SymbolInfo *tmp = new SymbolInfo("statement", "statement");
@@ -849,6 +971,8 @@ variable : ID
 			tmp->endLine = $1->endLine;
 			tmp->children = $1;
 
+			tmp->isZero = false;
+
 			fprintf(logout, "variable : ID \t \n");
 
 			SymbolInfo *check = symbolTable->lookUp($1->getName());
@@ -866,7 +990,7 @@ variable : ID
 				if(check->getFlag() == 2){
 					error_count++;
 					fprintf(errorout, "Line# %d: \'%s\' is a function.\n", $1->startLine, $1->getName().c_str());
-					tmp->dType = check->getType();
+					tmp->dType = "UNDEFINED";
 					tmp->setFlag(0);
 				}
 				else{
@@ -891,8 +1015,10 @@ variable : ID
 			$3->next = $4;
 			$4->next = NULL;
 			tmp->children = $1;
-
+			
 			fprintf(logout, "variable : ID LSQUARE expression RSQUARE  \t \n");
+
+			tmp->isZero = false;
 
 			SymbolInfo *check = symbolTable->lookUp($1->getName());
 			if(check == NULL){
@@ -907,12 +1033,13 @@ variable : ID
 				if(check->getFlag() == 1){
 					if($3->dType != "INT"){
 						error_count++;
-						fprintf(errorout, "Line# %d:  Array subscript is not an integer\n", $1->startLine);
+						fprintf(errorout, "Line# %d: Array subscript is not an integer\n", $1->startLine);
 					}
 				}
 				else {
 					error_count++;
-					fprintf(errorout, "Line# %d: \'%s\' is not an array\n\n", $1->startLine, check->getName());
+					fprintf(errorout, "Line# %d: \'%s\' is not an array\n", $1->startLine, $1->getName().c_str());
+
 				}	
 			}
 			$$ = tmp;
@@ -923,10 +1050,9 @@ expression : logic_expression
 		   {
 				SymbolInfo *tmp = new SymbolInfo($1->getName(), "expression");
 				
-				// This needs to be change 
-				tmp->dType = "INT";
-				tmp->setFlag(0);
-				// This needs to be change 
+				tmp->dType = $1->dType;
+				tmp->setFlag($1->getFlag());
+				tmp->isZero = $1->isZero;
 				
 				tmp->leftPart = "expression";
 				tmp->rightPart = "logic_expression";
@@ -941,10 +1067,8 @@ expression : logic_expression
 		   {
 				SymbolInfo *tmp = new SymbolInfo($1->getName(), "expression");
 				
-				// This needs to be change 
-				tmp->dType = "INT";
 				tmp->setFlag(0);
-				// This needs to be change 
+				tmp->isZero = false;
 				
 				tmp->leftPart = "expression";
 				tmp->rightPart = "variable ASSIGNOP logic_expression";
@@ -958,6 +1082,24 @@ expression : logic_expression
 
 				$$ = tmp;
 				fprintf(logout, "expression \t: variable ASSIGNOP logic_expression \t\t \n");
+
+				if($1->dType == "VOID" || $3->dType == "VOID"){
+					error_count++;
+					fprintf(errorout, "Line# %d: Void cannot be used in expression \n", $1->startLine);
+					tmp->dType = "UNDEFINED";
+				}
+				else if($1->dType == "UNDEFINED" || $3->dType == "UNDEFINED"){
+					tmp->dType = "UNDEFINED";
+				}
+				else{
+					tmp->dType = $1->dType;
+					if($1->dType == "INT" && $3->dType == "FLOAT")
+					{
+						error_count++;
+						fprintf(errorout, "Line# %d: Warning: possible loss of data in assignment of FLOAT to INT\n", $1->startLine);
+						
+					}
+				}
 		   }
 		   ;
 
@@ -965,10 +1107,9 @@ logic_expression : rel_expression
 				 {
 					SymbolInfo *tmp = new SymbolInfo($1->getName(), "logic_expression");
 					
-					// This needs to be change 
-					tmp->dType = "";
-					tmp->setFlag(0);
-					// This needs to be change 
+					tmp->dType = $1->dType;
+					tmp->setFlag($1->getFlag());
+					tmp->isZero = $1->isZero;
 
 					tmp->leftPart = "logic_expression";
 					tmp->rightPart = "rel_expression";
@@ -983,10 +1124,9 @@ logic_expression : rel_expression
 				 {
 					SymbolInfo *tmp = new SymbolInfo($1->getName(), "logic_expression");
 					
-					// This needs to be change 
-					tmp->dType = "";
+					tmp->dType = "INT";
 					tmp->setFlag(0);
-					// This needs to be change 
+					tmp->isZero = false;
 					
 					tmp->leftPart = "logic_expression";
 					tmp->rightPart = "rel_expression LOGICOP rel_expression";
@@ -1000,14 +1140,26 @@ logic_expression : rel_expression
 
 					$$ = tmp;
 					fprintf(logout, "logic_expression : rel_expression LOGICOP rel_expression \t \t \n");
+
+					if($1->dType == "VOID" || $3->dType == "VOID"){
+						error_count++;
+						fprintf(errorout, "Line# %d: Void cannot be used in expression \n", $1->startLine);
+					}
+					if($1->dType != "INT" || $3->dType != "INT"){
+						error_count++;
+						fprintf(errorout, "Line# %d: Both operands should be int\n", $1->startLine);
+					}
 				 }
 				 ;
 
 rel_expression : simple_expression
 			   {
 					SymbolInfo *tmp = new SymbolInfo($1->getName(), "rel_expression");
+					
 					tmp->dType = $1->dType;
 					tmp->setFlag($1->getFlag());
+					tmp->isZero = $1->isZero;
+
 					tmp->leftPart = "rel_expression";
 					tmp->rightPart = "simple_expression";
 					tmp->startLine = $1->startLine;
@@ -1020,8 +1172,11 @@ rel_expression : simple_expression
 			   simple_expression RELOP simple_expression
 			   {
 					SymbolInfo *tmp = new SymbolInfo($1->getName(), "rel_expression");
-					// tmp->dType = $ 1->dType;
-					// tmp->setFlag($ 1->getFlag());
+					
+					tmp->dType = "INT";
+					tmp->setFlag(0);
+					tmp->isZero = false;
+
 					tmp->leftPart = "rel_expression";
 					tmp->rightPart = "simple_expression RELOP simple_expression";
 					tmp->startLine = $1->startLine;
@@ -1034,14 +1189,22 @@ rel_expression : simple_expression
 
 					$$ = tmp;
 					fprintf(logout, "rel_expression\t: simple_expression RELOP simple_expression\t  \n");
+			   		
+					if($1->dType == "VOID" || $3->dType == "VOID"){
+						error_count++;
+						fprintf(errorout, "Line# %d: Void cannot be used in expression \n", $1->startLine);
+					}
 			   }
 			   ;
 
 simple_expression : term
 				  {
 						SymbolInfo *tmp = new SymbolInfo($1->getName(), "simple_expression");
+						
 						tmp->dType = $1->dType;
 						tmp->setFlag($1->getFlag());
+						tmp->isZero = $1->isZero;
+						
 						tmp->leftPart = "simple_expression";
 						tmp->rightPart = "term";
 						tmp->startLine = $1->startLine;
@@ -1054,8 +1217,9 @@ simple_expression : term
 				  simple_expression ADDOP term
 				  {
 						SymbolInfo *tmp = new SymbolInfo($1->getName(), "simple_expression");
-						// tmp->dType = $ 1->dType;
-						// tmp->setFlag($ 1->getFlag());
+
+						tmp->isZero = false;
+						
 						tmp->leftPart = "simple_expression";
 						tmp->rightPart = "simple_expression ADDOP term";
 						tmp->startLine = $1->startLine;
@@ -1065,17 +1229,38 @@ simple_expression : term
 						$2->next = $3;
 						$3->next = NULL;
 						tmp->children = $1;
-
+						
 						$$ = tmp;
 						fprintf(logout, "simple_expression : simple_expression ADDOP term  \n");
+
+						tmp->setFlag(0);
+						if($1->dType == "UNDEFINED" || $3->dType == "UNDEFINED"){
+							tmp->dType = "UNDEFINED";
+						}
+						else if($1->dType == "VOID" || $3->dType == "VOID"){
+							error_count++;
+							fprintf(errorout, "Line# %d: Void cannot be used in expression \n", $1->startLine);
+							tmp->dType = "UNDEFINED";
+						}
+						else{
+							if($1->dType == "INT" && $3->dType == "INT"){
+								tmp->dType = "INT";
+							}
+							else {
+								tmp->dType = "FLOAT";
+							}
+						}
 				  }
 				  ;
 
 term : unary_expression
 	 {
 		SymbolInfo *tmp = new SymbolInfo($1->getName(), "term");
+		
 		tmp->dType = $1->dType;
 		tmp->setFlag($1->getFlag());
+		tmp->isZero = $1->isZero; // unary_expression can be zero...
+		
 		tmp->leftPart = "term";
 		tmp->rightPart = "unary_expression";
 		tmp->startLine = $1->startLine;
@@ -1093,8 +1278,9 @@ term : unary_expression
 		// An error has already been shown for functions.
 
 		SymbolInfo *tmp = new SymbolInfo($1->getName(), "term");
-		// tmp->dType = $ 1->dType;
-		// tmp->setFlag($ 1->getFlag());
+		
+		tmp->isZero = false;
+
 		tmp->leftPart = "term";
 		tmp->rightPart = "term MULOP unary_expression";
 		tmp->startLine = $1->startLine;
@@ -1108,17 +1294,64 @@ term : unary_expression
 		$$ = tmp;
 		fprintf(logout, "term :\tterm MULOP unary_expression \n");
 
-
+		tmp->setFlag(0);
 		// dType and flag needs to be saved....
-
+		bool flag = true; // if this is true farther checking is needed. When we get a certain error...
+						  // we no longer look for error
+		// Sets teh type of the term
+		if($1->dType == "UNDEFINED" || $3->dType == "UNDEFINED"){
+			tmp->dType = "UNDEFINED";
+			flag = false;
+		}
+		else if($1->dType == "VOID" || $3->dType == "VOID"){
+			error_count++;
+			fprintf(errorout, "Line# %d: Void cannot be used in expression \n", $1->startLine);
+			tmp->dType = "UNDEFINED";
+			flag = false;
+		}
+		else{
+			flag = true;
+			if($1->dType == "INT" && $3->dType == "INT"){
+				tmp->dType = "INT";
+			}
+			else {
+				tmp->dType = "FLOAT";
+			}
+		}
+		
+		// Checks for some errors.
+		if(flag){
+			if($2->getName() == "%"){
+				if($1->dType == "FLOAT" || $3->dType == "FLOAT"){
+					error_count++;
+					fprintf(errorout, "Line# %d: Operands of modulus must be integers \n", $1->startLine);
+					tmp->dType = "UNDEFINED";
+				}
+				else if($3->isZero){
+					error_count++;
+					fprintf(errorout, "Line# %d: Warning: division by zero i=0f=1Const=0\n", $1->startLine);
+					tmp->dType = "UNDEFINED";
+				}
+			}
+			else if($2->getName() == "/"){
+				if($3->isZero){
+					error_count++;
+					fprintf(errorout, "Line# %d: Warning: division by zero i=0f=1Const=0\n", $1->startLine);
+					tmp->dType = "UNDEFINED";
+				}
+			}
+		}
 	 }
 	 ;
 
 unary_expression : ADDOP unary_expression
 				 {
 					SymbolInfo *tmp = new SymbolInfo($2->getName(), "unary_expression");
+					
 					tmp->dType = $2->dType;
 					tmp->setFlag($2->getFlag());
+					tmp->isZero = false;
+					
 					tmp->leftPart = "unary_expression";
 					tmp->rightPart = "ADDOP unary_expression";
 					tmp->startLine = $1->startLine;
@@ -1135,8 +1368,11 @@ unary_expression : ADDOP unary_expression
 				 NOT unary_expression
 				 {
 					SymbolInfo *tmp = new SymbolInfo($2->getName(), "unary_expression");
+					
 					tmp->dType = $2->dType;
 					tmp->setFlag($2->getFlag());
+					tmp->isZero = false;
+					
 					tmp->leftPart = "unary_expression";
 					tmp->rightPart = "NOT unary_expression";
 					tmp->startLine = $1->startLine;
@@ -1157,8 +1393,11 @@ unary_expression : ADDOP unary_expression
 					// functions are considered as variables with dType as the returnType of the function.
 					// An error has already been shown for functions.
 					SymbolInfo *tmp = new SymbolInfo($1->getName(), "unary_expression");
+					
 					tmp->dType = $1->dType;
 					tmp->setFlag($1->getFlag());
+					tmp->isZero = $1->isZero; // factor can be zero...
+					
 					tmp->leftPart = "unary_expression";
 					tmp->rightPart = "factor";
 					tmp->startLine = $1->startLine;
@@ -1177,7 +1416,7 @@ factor : variable
 			// An error has already been shown for functions
 			SymbolInfo *tmp = new SymbolInfo($1->getName(), "factor");
 			tmp->dType = $1->dType;
-
+			tmp->isZero = $1->isZero; // will be always false
 			// Passing the type of ID(array or variable) to the factor.
 			tmp->setFlag($1->getFlag());
 			tmp->leftPart = "factor";
@@ -1192,11 +1431,11 @@ factor : variable
 	   ID LPAREN argument_list RPAREN
 	   {
 			SymbolInfo *tmp = new SymbolInfo($1->getName(), "factor");
-			// This will be changed;
-			tmp->dType = $1->getType();
+			// Data type should be the return type of the function. As all our return types 
+			// are variables .....so we setting the flag 0 -> variable
+			// tmp->dType = $1->getType();
 			tmp->setFlag(0);
-			// This will be changed;
-
+			tmp->isZero = false;
 			tmp->leftPart = "factor";
 			tmp->rightPart = "ID LPAREN argument_list RPAREN";
 			tmp->startLine = $1->startLine;
@@ -1210,14 +1449,68 @@ factor : variable
 
 			$$ = tmp;
 			fprintf(logout, "factor\t: ID LPAREN argument_list RPAREN  \n");
+
+			SymbolInfo *check = symbolTable->lookUp($1->getName());
+
+			// bool flag = true;
+			if(check == NULL){
+				// flag = false;
+				error_count++;
+				fprintf(errorout, "Line# %d: Undeclared function \'%s\'\n", $1->startLine, $1->getName().c_str());
+			}
+			else if(check->getFlag() != 2){
+				error_count++;
+				fprintf(errorout, "Line# %d: \'%s\' is not a function\n", $1->startLine, $1->getName().c_str());
+			}
+			else if(!check->isDefined){
+				error_count++;
+				fprintf(errorout, "Line# %d: Inconsistent function call.\n", $1->startLine);
+			}
+			else{
+				if(check->params->getLength() > args.getLength()){
+					error_count++;
+					fprintf(errorout, "Line# %d: Too few arguments to function \'%s\'\n", $1->startLine, $1->getName().c_str());
+				}
+				else if(check->params->getLength() < args.getLength()){
+					error_count++;
+					fprintf(errorout, "Line# %d: Too many arguments to function \'%s\'\n", $1->startLine, $1->getName().c_str());
+				}
+				else{
+					SymbolInfo *funcCur = check->params->head;
+					SymbolInfo *paramCur = args.head;
+					int i = 1;
+					while(funcCur != NULL){
+						if(funcCur->getType() != paramCur->dType){
+							error_count++;
+							fprintf(errorout, "Line# %d: Type mismatch for argument %d of \'%s\'\n", $1->startLine, i, $1->getName().c_str());
+						}
+						funcCur = funcCur->next;
+						paramCur = paramCur->next;
+						i++;
+					}
+				}
+			}
+			
+			if(check != NULL){
+				tmp->dType = check->getType();
+			}
+			else{
+				tmp->dType = "UNDEFINED";
+			}
 			args.clear();
 	   }
 	   |
 	   LPAREN expression RPAREN
 	   {
 			SymbolInfo *tmp = new SymbolInfo($2->getName(), "factor");
+
+			// The dType of factor should the dType of the expression.
+			// The flag should be the flag of the expression.
+			
 			tmp->dType = $2->dType;
 			tmp->setFlag($2->getFlag());
+			tmp->isZero = $2->isZero; // expression can be zero... 
+
 			tmp->leftPart = "factor";
 			tmp->rightPart = "LPAREN expression RPAREN";
 			tmp->startLine = $1->startLine;
@@ -1235,8 +1528,16 @@ factor : variable
 	   CONST_INT
 	   {
 			SymbolInfo *tmp = new SymbolInfo($1->getName(), "factor");
+			
 			tmp->dType = "INT";
 			tmp->setFlag(0);
+			if($1->getName() == "0"){
+				tmp->isZero = true;
+			}
+			else{
+				tmp->isZero = false;
+			}
+			
 			tmp->leftPart = "factor";
 			tmp->rightPart = "CONST_INT";
 			tmp->startLine = $1->startLine;
@@ -1249,8 +1550,11 @@ factor : variable
 	   CONST_FLOAT
 	   {
 			SymbolInfo *tmp = new SymbolInfo($1->getName(), "factor");
+			
 			tmp->dType = "FLOAT";
 			tmp->setFlag(0);
+			tmp->isZero = false;
+			
 			tmp->leftPart = "factor";
 			tmp->rightPart = "CONST_FLOAT";
 			tmp->startLine = $1->startLine;
@@ -1267,8 +1571,11 @@ factor : variable
 			// But might be necessary....in the future.
 
 			SymbolInfo *tmp = new SymbolInfo($1->getName() + "++", "factor");
+			
 			tmp->dType = $1->dType;
 			tmp->setFlag($1->getFlag());
+			tmp->isZero = false;
+
 			tmp->leftPart = "factor";
 			tmp->rightPart = "variable INCOP";
 			tmp->startLine = $1->startLine;
@@ -1285,8 +1592,11 @@ factor : variable
 	   variable DECOP
 	   {
 			SymbolInfo *tmp = new SymbolInfo($1->getName() + "--", "factor");
+			
 			tmp->dType = $1->dType;
 			tmp->setFlag($1->getFlag());
+			tmp->isZero = false; // We can't tell until we evaluate the expression.
+			
 			tmp->leftPart = "factor";
 			tmp->rightPart = "variable DECOP";
 			tmp->startLine = $1->startLine;

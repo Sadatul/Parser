@@ -33,6 +33,7 @@ public:
 
     string dType; // Some symbols like factor, expression requires a extra data type.
                   // This is used for that purpose.
+    bool isZero;  // For expressions, factors etc that evaluates to zero
 
     SymbolInfo *children; // For the parse Tree childrens
     string leftPart;      // Parse Tree: Defines the left part of the production rule used

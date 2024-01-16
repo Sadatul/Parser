@@ -115,6 +115,74 @@ return {
     return RETURN;
 
 }
+
+for {
+    SymbolInfo *tmp = new SymbolInfo(yytext, "FOR");
+    tmp->leftPart = "FOR";
+    tmp->rightPart = "for";
+    tmp->isLeaf = true;
+    tmp->startLine = line_count;
+    tmp->endLine = line_count;
+    yylval.symbol = tmp;
+
+    fprintf(logout, "Line# %d: Token <FOR> Lexeme for found\n", line_count);
+    return FOR;
+
+}
+
+if {
+    SymbolInfo *tmp = new SymbolInfo(yytext, "IF");
+    tmp->leftPart = "IF";
+    tmp->rightPart = "if";
+    tmp->isLeaf = true;
+    tmp->startLine = line_count;
+    tmp->endLine = line_count;
+    yylval.symbol = tmp;
+
+    fprintf(logout, "Line# %d: Token <IF> Lexeme if found\n", line_count);
+    return IF;
+
+}
+
+else {
+    SymbolInfo *tmp = new SymbolInfo(yytext, "ELSE");
+    tmp->leftPart = "ELSE";
+    tmp->rightPart = "else";
+    tmp->isLeaf = true;
+    tmp->startLine = line_count;
+    tmp->endLine = line_count;
+    yylval.symbol = tmp;
+
+    fprintf(logout, "Line# %d: Token <ELSE> Lexeme else found\n", line_count);
+    return ELSE;
+
+}
+
+while {
+    SymbolInfo *tmp = new SymbolInfo(yytext, "WHILE");
+    tmp->leftPart = "WHILE";
+    tmp->rightPart = "while";
+    tmp->isLeaf = true;
+    tmp->startLine = line_count;
+    tmp->endLine = line_count;
+    yylval.symbol = tmp;
+
+    fprintf(logout, "Line# %d: Token <WHILE> Lexeme while found\n", line_count);
+    return WHILE;
+}
+
+println {
+    SymbolInfo *tmp = new SymbolInfo(yytext, "PRINTLN");
+    tmp->leftPart = "PRINTLN";
+    tmp->rightPart = "println";
+    tmp->isLeaf = true;
+    tmp->startLine = line_count;
+    tmp->endLine = line_count;
+    yylval.symbol = tmp;
+
+    fprintf(logout, "Line# %d: Token <PRINTLN> Lexeme println found\n", line_count);
+    return PRINTLN;
+}
 {CONST_INT} {
     // fprintf(tokenout,"<CONST_INT, %s>\n", yytext);
     SymbolInfo *tmp = new SymbolInfo(yytext, "CONST_INT");
