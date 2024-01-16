@@ -49,7 +49,7 @@ void printParseTree(SymbolInfo *root, int level){
 	}
 	fprintf(parseTree, "%s : %s", root->leftPart.c_str(), root->rightPart.c_str());
 	if(root->isLeaf){
-		fprintf(parseTree, " \t<Line: %d>\n", root->startLine);
+		fprintf(parseTree, "\t<Line: %d>\n", root->startLine);
 	}
 	else{
 		fprintf(parseTree, " \t<Line: %d-%d>\n", root->startLine, root->endLine);
@@ -132,7 +132,7 @@ unit : var_declaration
 		tmp->endLine = $1->endLine;
 		tmp->children = $1;
 		$$ = tmp;
-		fprintf(logout, "unit : var_declaration \n");
+		fprintf(logout, "unit : var_declaration  \n");
 	 }
 	 |
 	 func_declaration
@@ -156,7 +156,7 @@ unit : var_declaration
 		tmp->endLine = $1->endLine;
 		tmp->children = $1;
 		$$ = tmp;
-		fprintf(logout, "unit : func_definition \n");
+		fprintf(logout, "unit : func_definition  \n");
 	 }
 	 ;
 
@@ -390,7 +390,7 @@ func_definition : type_specifier ID LPAREN parameter_list RPAREN
 					$4->next = $6;
 					$6->next = NULL;
 					$$->children = $1;
-					fprintf(logout, "func_definition : type_specifier ID LPAREN RPAREN compound_statement \n");
+					fprintf(logout, "func_definition : type_specifier ID LPAREN RPAREN compound_statement\n");
 
 					funcReturnType = "";
 				}
@@ -426,7 +426,7 @@ parameter_list : parameter_list COMMA type_specifier ID
 					} else {
 						params.insert(SymbolInfo::getVariableSymbol($4->getName(), $3->getName()));
 					}
-					fprintf(logout, "parameter_list : parameter_list COMMA type_specifier ID \n");
+					fprintf(logout, "parameter_list  : parameter_list COMMA type_specifier ID\n");
 				}
 				|
 				parameter_list COMMA type_specifier
@@ -444,7 +444,7 @@ parameter_list : parameter_list COMMA type_specifier ID
 					$$->children = $1;
 
 					params.insert(SymbolInfo::getVariableSymbol("", $3->getName()));
-					fprintf(logout, "parameter_list : parameter_list COMMA type_specifier \n");
+					fprintf(logout, "parameter_list  : parameter_list COMMA type_specifier\n");
 				}
 				|
 				type_specifier ID
@@ -461,7 +461,7 @@ parameter_list : parameter_list COMMA type_specifier ID
 					$$->children = $1;
 
 					params.insert(SymbolInfo::getVariableSymbol($2->getName(), $1->getName()));
-					fprintf(logout, "parameter_list : type_specifier ID \n");
+					fprintf(logout, "parameter_list  : type_specifier ID\n");
 				}
 				|
 				type_specifier
@@ -477,7 +477,7 @@ parameter_list : parameter_list COMMA type_specifier ID
 					$$->children = $1;
 
 					params.insert(SymbolInfo::getVariableSymbol("", $1->getName()));
-					fprintf(logout, "parameter_list : type_specifier \n");
+					fprintf(logout, "parameter_list  : type_specifier\n");
 				}
 				;
 compound_statement : LCURL ENTER_SCOPE statements RCURL
@@ -493,7 +493,7 @@ compound_statement : LCURL ENTER_SCOPE statements RCURL
 						$3->next = $4;
 						$4->next = NULL;
 						$$->children = $1;
-						fprintf(logout, "compound_statement : LCURL statements RCURL \n");
+						fprintf(logout, "compound_statement : LCURL statements RCURL  \n");
 
 						symbolTable->printAllScopeTableInFile(logout);
 						symbolTable->exitScope();
@@ -511,7 +511,7 @@ compound_statement : LCURL ENTER_SCOPE statements RCURL
 						$1->next = $3;
 						$3->next = NULL;
 						$$->children = $1;
-						fprintf(logout, "compound_statement : LCURL RCURL \n");
+						fprintf(logout, "compound_statement : LCURL RCURL  \n");
 
 						symbolTable->printAllScopeTableInFile(logout);
 						symbolTable->exitScope();
@@ -544,7 +544,7 @@ var_declaration : type_specifier declaration_list SEMICOLON
 					$3->next = NULL;
 					$$->children = $1;
 
-					fprintf(logout, "var_declaration : type_specifier declaration_list SEMICOLON \n");
+					fprintf(logout, "var_declaration : type_specifier declaration_list SEMICOLON  \n");
 
 					if($1->getName() == "VOID"){
 						error_count++;
@@ -617,7 +617,7 @@ type_specifier : INT
 					tmp->endLine = yylval.symbol->endLine;
 					tmp->children = yylval.symbol;
 					$$ = tmp;
-					fprintf(logout, "type_specifier\t: VOID \n");
+					fprintf(logout, "type_specifier\t: VOID\n");
 				}
                 ;
 declaration_list : declaration_list COMMA ID
@@ -635,7 +635,7 @@ declaration_list : declaration_list COMMA ID
 					$$->children = $1;
 
 					vars.insert(SymbolInfo::getVariableSymbol($3->getName(), $3->getType()));
-					fprintf(logout, "declaration_list : declaration_list COMMA ID \n");
+					fprintf(logout, "declaration_list : declaration_list COMMA ID  \n");
 				 }
                  | declaration_list COMMA ID LSQUARE CONST_INT RSQUARE
 				 {
@@ -696,7 +696,7 @@ statements : statement
 				tmp->endLine = $1->endLine;
 				tmp->children = $1;
 				$$ = tmp;
-				fprintf(logout, "statements : statement \n");
+				fprintf(logout, "statements : statement  \n");
 		   }
 		   |
 		   statements statement
@@ -712,7 +712,7 @@ statements : statement
 				$2->next = NULL;
 				$$->children = $1;
 
-				fprintf(logout, "statements : statements statement \n");
+				fprintf(logout, "statements : statements statement  \n");
 		   }
 		   ;
 
@@ -737,7 +737,7 @@ statement : var_declaration
 			tmp->endLine = $1->endLine;
 			tmp->children = $1;
 			$$ = tmp;
-			fprintf(logout, "statement : expression_statement \n");
+			fprintf(logout, "statement : expression_statement  \n");
 		  }
 		  | compound_statement
 		  {
@@ -765,7 +765,7 @@ statement : var_declaration
 			tmp->children = $1;
 
 			$$ = tmp;
-			fprintf(logout, "statement : RETURN expression SEMICOLON \n");
+			fprintf(logout, "statement : RETURN expression SEMICOLON\n");
 		  
 		  	// Need to do error checking here.
 			
@@ -799,7 +799,7 @@ expression_statement : SEMICOLON
 						tmp->children = $1;
 
 						$$ = tmp;
-						fprintf(logout, "expression_statement : expression SEMICOLON \n");
+						fprintf(logout, "expression_statement : expression SEMICOLON \t\t \n");
 					 }
 
 variable : ID
@@ -817,7 +817,7 @@ variable : ID
 			tmp->endLine = $1->endLine;
 			tmp->children = $1;
 
-			fprintf(logout, "variable : ID \n");
+			fprintf(logout, "variable : ID \t \n");
 
 			SymbolInfo *check = symbolTable->lookUp($1->getName());
 			if(check == NULL){
@@ -860,7 +860,7 @@ variable : ID
 			$4->next = NULL;
 			tmp->children = $1;
 
-			fprintf(logout, "variable : ID LSQUARE expression RSQUARE \n");
+			fprintf(logout, "variable : ID LSQUARE expression RSQUARE  \t \n");
 
 			SymbolInfo *check = symbolTable->lookUp($1->getName());
 			if(check == NULL){
@@ -902,7 +902,7 @@ expression : logic_expression
 				tmp->endLine = $1->endLine;
 				tmp->children = $1;
 				$$ = tmp;
-				fprintf(logout, "expression : logic_expression \n");
+				fprintf(logout, "expression \t: logic_expression\t \n");
 		   }
 		   |
 		   variable ASSIGNOP logic_expression
@@ -925,7 +925,7 @@ expression : logic_expression
 				tmp->children = $1;
 
 				$$ = tmp;
-				fprintf(logout, "expression : variable ASSIGNOP logic_expression \n");
+				fprintf(logout, "expression \t: variable ASSIGNOP logic_expression \t\t \n");
 		   }
 		   ;
 
@@ -944,7 +944,7 @@ logic_expression : rel_expression
 					tmp->endLine = $1->endLine;
 					tmp->children = $1;
 					$$ = tmp;
-					fprintf(logout, "logic_expression : rel_expression \n");
+					fprintf(logout, "logic_expression : rel_expression \t \n");
 				 }
 				 |
 				 rel_expression LOGICOP rel_expression
@@ -967,7 +967,7 @@ logic_expression : rel_expression
 					tmp->children = $1;
 
 					$$ = tmp;
-					fprintf(logout, "logic_expression : rel_expression LOGICOP rel_expression \n");
+					fprintf(logout, "logic_expression : rel_expression LOGICOP rel_expression \t \t \n");
 				 }
 				 ;
 
@@ -982,7 +982,7 @@ rel_expression : simple_expression
 					tmp->endLine = $1->endLine;
 					tmp->children = $1;
 					$$ = tmp;
-					fprintf(logout, "rel_expression : simple_expression \n");
+					fprintf(logout, "rel_expression\t: simple_expression \n");
 			   }
 			   |
 			   simple_expression RELOP simple_expression
@@ -1001,7 +1001,7 @@ rel_expression : simple_expression
 					tmp->children = $1;
 
 					$$ = tmp;
-					fprintf(logout, "rel_expression : simple_expression RELOP simple_expression \n");
+					fprintf(logout, "rel_expression\t: simple_expression RELOP simple_expression\t  \n");
 			   }
 			   ;
 
@@ -1035,7 +1035,7 @@ simple_expression : term
 						tmp->children = $1;
 
 						$$ = tmp;
-						fprintf(logout, "simple_expression : simple_expression ADDOP term \n");
+						fprintf(logout, "simple_expression : simple_expression ADDOP term  \n");
 				  }
 				  ;
 
@@ -1050,7 +1050,7 @@ term : unary_expression
 		tmp->endLine = $1->endLine;
 		tmp->children = $1;
 		$$ = tmp;
-		fprintf(logout, "term : unary_expression \n");
+		fprintf(logout, "term :\tunary_expression \n");
 	 }
 	 |
 	 term MULOP unary_expression
@@ -1074,7 +1074,7 @@ term : unary_expression
 		tmp->children = $1;
 
 		$$ = tmp;
-		fprintf(logout, "term : term MULOP unary_expression \n");
+		fprintf(logout, "term :\tterm MULOP unary_expression \n");
 
 
 		// dType and flag needs to be saved....
@@ -1154,7 +1154,7 @@ factor : variable
 			tmp->endLine = $1->endLine;
 			tmp->children = $1;
 			$$ = tmp;
-			fprintf(logout, "factor : variable \n");
+			fprintf(logout, "factor\t: variable \n");
 	   }
 	   |
 	   ID LPAREN argument_list RPAREN
@@ -1177,7 +1177,7 @@ factor : variable
 			tmp->children = $1;
 
 			$$ = tmp;
-			fprintf(logout, "factor : ID LPAREN argument_list RPAREN \n");
+			fprintf(logout, "factor\t: ID LPAREN argument_list RPAREN  \n");
 			args.clear();
 	   }
 	   |
@@ -1197,7 +1197,7 @@ factor : variable
 			tmp->children = $1;
 
 			$$ = tmp;
-			fprintf(logout, "factor : LPAREN expression RPAREN \n");
+			fprintf(logout, "factor\t: LPAREN expression RPAREN   \n");
 	   }
 	   |
 	   CONST_INT
@@ -1211,7 +1211,7 @@ factor : variable
 			tmp->endLine = $1->endLine;
 			tmp->children = $1;
 			$$ = tmp;
-			fprintf(logout, "factor : CONST_INT \n");
+			fprintf(logout, "factor\t: CONST_INT   \n");
 	   }
 	   |
 	   CONST_FLOAT
@@ -1225,7 +1225,7 @@ factor : variable
 			tmp->endLine = $1->endLine;
 			tmp->children = $1;
 			$$ = tmp;
-			fprintf(logout, "factor : CONST_FLOAT \n");
+			fprintf(logout, "factor\t: CONST_FLOAT   \n");
 	   }
 	   |
 	   variable INCOP
@@ -1247,7 +1247,7 @@ factor : variable
 			tmp->children = $1;
 			$$ = tmp;
 			
-			fprintf(logout, "factor : variable INCOP \n");
+			fprintf(logout, "factor\t: variable INCOP \n");
 	   }
 	   |
 	   variable DECOP
@@ -1265,7 +1265,7 @@ factor : variable
 			tmp->children = $1;
 			$$ = tmp;
 
-			fprintf(logout, "factor : variable DECOP \n");
+			fprintf(logout, "factor\t: variable DECOP \n");
 	   }
 	   ;
 
@@ -1278,7 +1278,7 @@ argument_list : arguments
 				tmp->endLine = $1->endLine;
 				tmp->children = $1;
 				$$ = tmp;
-				fprintf(logout, "argument_list : arguments \n");
+				fprintf(logout, "argument_list : arguments  \n");
 			  }
 			  |
 			  {
@@ -1332,7 +1332,7 @@ arguments : arguments COMMA logic_expression
 			$$ = tmp;
 
 			args.insert(arg);
-			fprintf(logout, "arguments : logic_expression \n");
+			fprintf(logout, "arguments : logic_expression\n");
 		  }
 		  ;
 %%
@@ -1367,8 +1367,8 @@ int main(int argc,char *argv[]){
     /* Total lines: 16
 Total errors: 14
 Total warnings: 0 */
-  	fprintf(logout, "Total lines: %d\n", line_count); 
-    fprintf(logout, "Total errors: %d\n", error_count); 
+  	fprintf(logout, "Total Lines: %d\n", line_count); 
+    fprintf(logout, "Total Errors: %d\n", error_count); 
     /* fprintf(logout, "Total warnings: %d\n", warning_count);  */
 	fclose(yyin);
 	fclose(logout);

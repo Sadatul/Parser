@@ -325,31 +325,31 @@ void ScopeTable::printInFile(FILE *file)
         {
             continue;
         }
-        fprintf(file, "\t%d", i + 1);
+        fprintf(file, "\t%d-->", i + 1);
         while (tmp)
         {
             if (tmp->getFlag() == 0)
             {
-                fprintf(file, " --> (%s,%s)", tmp->getName().c_str(), tmp->getType().c_str());
+                fprintf(file, " <%s,%s>", tmp->getName().c_str(), tmp->getType().c_str());
             }
             else if (tmp->getFlag() == 1)
             {
-                fprintf(file, " --> (%s,%s,%d)", tmp->getName().c_str(), tmp->getType().c_str(), tmp->arraySize);
+                fprintf(file, " <%s,ARRAY>", tmp->getName().c_str());
             }
             else if (tmp->getFlag() == 2)
             {
-                string s = "";
-                SymbolInfo *tmp1 = tmp->params->head;
-                while (tmp1)
-                {
-                    s += tmp1->getType();
-                    tmp1 = tmp1->next;
-                }
-                fprintf(file, " --> (%s,FUNCTION%s,%s)", tmp->getName().c_str(), s.c_str(), tmp->getType().c_str());
+                // string s = "";
+                // SymbolInfo *tmp1 = tmp->params->head;
+                // while (tmp1)
+                // {
+                //     s += tmp1->getType();
+                //     tmp1 = tmp1->next;
+                // }
+                fprintf(file, " <%s,FUNCTION,%s>", tmp->getName().c_str(), tmp->getType().c_str());
             }
             tmp = tmp->getNext();
         }
-        fprintf(file, "\n");
+        fprintf(file, " \n");
     }
 }
 
