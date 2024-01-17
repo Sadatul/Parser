@@ -13,7 +13,7 @@
 #include<string.h>
 #include "2005077_SymbolTable.h"
 #include<iostream>
-#include "y.tab.h"
+#include "parser.hpp"
 
 extern int line_count;
 extern int error_count;

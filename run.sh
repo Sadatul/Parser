@@ -11,7 +11,6 @@ cp -f 2005077_SymbolTable.h ./bin
 echo 'Copied the header file'
 
 yacc -d 2005077_Parser.y -o ./bin/parser.cpp
-mv -f y.tab.h ./bin/y.tab.h
 echo 'Generated the parser.cpp file.'
 
 g++ -w -c -o ./bin/parser.o ./bin/parser.cpp

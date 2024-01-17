@@ -36,7 +36,8 @@ bool callAddFunction = false;
 
 void yyerror(char *s){
 	error_count++;
-	fprintf(errorout, "Line# %d: %s\n", line_count, s);	
+	fprintf(logout, "Error at line no %d : %s\n", line_count, s);
+	fprintf(errorout, "Error at line no %d : %s\n", line_count, s);	
 }
 
 void addFunction(string name, string type, bool isDefined){
@@ -88,7 +89,7 @@ void freeParseTree(SymbolInfo *root){
     SymbolInfo *symbol;
 }
 
-%token <symbol> INT, FLOAT, VOID, SEMICOLON, COMMA, ID, LSQUARE, CONST_INT, CONST_FLOAT, RSQUARE, LPAREN, RPAREN, LCURL, RCURL, ASSIGNOP, RELOP, LOGICOP, ADDOP, MULOP, NOT, INCOP, DECOP, RETURN, FOR, IF, ELSE, WHILE, PRINTLN
+%token <symbol> INT FLOAT VOID SEMICOLON COMMA ID LSQUARE CONST_INT CONST_FLOAT RSQUARE LPAREN RPAREN LCURL RCURL ASSIGNOP RELOP LOGICOP ADDOP MULOP NOT INCOP DECOP RETURN FOR IF ELSE WHILE PRINTLN
 %type <symbol> start program unit var_declaration type_specifier declaration_list func_declaration func_definition parameter_list compound_statement statements statement factor variable unary_expression term simple_expression rel_expression logic_expression expression expression_statement arguments argument_list
 
 %{
@@ -520,7 +521,23 @@ parameter_list : parameter_list COMMA type_specifier ID
 					$$->children = $1;
 
 					params.insert(SymbolInfo::getVariableSymbol("", $1->getName()));
-					fprintf(logout, "parameter_list  : type_specifier\n");
+					fprintf(logout, "parameter_list  : type_specifier \n");
+				}
+				|
+				error
+				{
+					fprintf(logout, "Line# %d: parameter_list: Syntax error1\n", line_count);
+					yyclearin ;
+					fprintf(logout, "Line# %d: parameter_list: Syntax error2\n", line_count);
+					SymbolInfo *tmp = new SymbolInfo("parameter_list", "parameter_list");
+					tmp->leftPart = "parameter_list";
+					tmp->rightPart = "error";
+					tmp->startLine = line_count;
+					tmp->endLine = line_count;
+					tmp->isLeaf = true;
+					tmp->children = NULL;
+					
+					$$ = tmp;
 				}
 				;
 compound_statement : LCURL ENTER_SCOPE statements RCURL
@@ -728,6 +745,20 @@ declaration_list : declaration_list COMMA ID
 					vars.insert(SymbolInfo::getArrayTypeSymbol($1->getName(), $1->getType(), stoi($3->getName())));
 					fprintf(logout, "declaration_list : ID LSQUARE CONST_INT RSQUARE \n");
 				 }
+				 |
+				 error {
+					SymbolInfo *tmp = new SymbolInfo("dedeclaration_list", "declaration_list");
+					tmp->leftPart = "declaration_list";
+					tmp->rightPart = "error";
+					tmp->startLine = line_count;
+					tmp->endLine = line_count;
+					tmp->isLeaf = true;
+					tmp->children = NULL;
+					$$ = tmp;
+
+					fprintf(logout, "Line# %d: declaration_list: Syntax error\n", line_count);
+					yyclearin;
+				}
                  ;
 
 statements : statement
@@ -1101,6 +1132,20 @@ expression : logic_expression
 					}
 				}
 		   }
+		   |
+			error {
+				yyclearin;
+				SymbolInfo *tmp = new SymbolInfo("expression", "expression");
+				tmp->leftPart = "expression";
+				tmp->rightPart = "error";
+				tmp->startLine = line_count;
+				tmp->endLine = line_count;
+				tmp->isLeaf = true;
+				tmp->children = NULL;
+				$$ = tmp;
+
+				fprintf(logout, "Line# %d: expression: Syntax error\n", line_count);
+			}
 		   ;
 
 logic_expression : rel_expression
