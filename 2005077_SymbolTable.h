@@ -35,7 +35,7 @@ public:
                   // This is used for that purpose.
     bool isZero;  // For expressions, factors etc that evaluates to zero
 
-    bool error; // For error recovery
+    bool error; // For error recovery. Default value for it is false
 
     SymbolInfo *children; // For the parse Tree childrens
     string leftPart;      // Parse Tree: Defines the left part of the production rule used

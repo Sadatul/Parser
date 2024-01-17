@@ -37,7 +37,7 @@ bool callAddFunction = false;
 void yyerror(char *s){
 	error_count++;
 	fprintf(logout, "Error at line no %d : %s\n", line_count, s);
-	fprintf(errorout, "Error at line no %d : %s\n", line_count, s);	
+	// fprintf(errorout, "Error at line no %d : %s\n", line_count, s);	
 }
 
 void addFunction(string name, string type, bool isDefined){
@@ -190,6 +190,10 @@ func_declaration : type_specifier ID LPAREN parameter_list RPAREN SEMICOLON
 					tmp->endLine = $6->endLine;
 					$$ = tmp;
 
+					if($4->error){
+						fprintf(errorout, "Line# %d: Syntax error at parameter list of function declaration\n", $1->startLine);
+					}
+
 					$1->next = $2;
 					$2->next = $3;
 					$3->next = $4;
@@ -210,7 +214,7 @@ func_declaration : type_specifier ID LPAREN parameter_list RPAREN SEMICOLON
 							fprintf(errorout, "Line# %d: Multiple Declaration of function \'%s\'\n", $1->startLine, $2->getName().c_str());
 						}
 					}
-					else {
+					else if(!$4->error){
 						SymbolInfo *tmp2 = new SymbolInfo($2->getName(), $1->getName(), 2);
 						tmp2->isDefined = false;
 						SymbolInfo *cur = params.head;
@@ -271,6 +275,11 @@ func_definition : type_specifier ID LPAREN parameter_list RPAREN
 					// encounter return statement.
 					funcReturnType = type;
 					funcName = name;
+
+					// Recovering from parameter_list error
+					if($4->error){
+						fprintf(errorout, "Line# %d: Syntax error at parameter list of function definition\n", $1->startLine);
+					}
 					
 					SymbolInfo *func = symbolTable->lookUp(name);
 					if(func == NULL){
@@ -339,7 +348,8 @@ func_definition : type_specifier ID LPAREN parameter_list RPAREN
 				}
 				compound_statement
 				{
-					if(callAddFunction)
+					// Call addFunction only if there is no error in parameter_list
+					if(callAddFunction && (!$4->error))
 					{
 						addFunction(funcName, funcReturnType, true);
 					}
@@ -471,6 +481,19 @@ parameter_list : parameter_list COMMA type_specifier ID
 						params.insert(SymbolInfo::getVariableSymbol($4->getName(), $3->getName()));
 					}
 					fprintf(logout, "parameter_list  : parameter_list COMMA type_specifier ID\n");
+				
+					if($1->error){
+						$$->error = true;
+						$$->children = NULL;
+						$$->leftPart = "parameter_list";
+						$$->rightPart = "error";
+						$$->isLeaf = true;
+
+						delete $1;
+						delete $2;
+						delete $3;
+						delete $4;
+					}
 				}
 				|
 				parameter_list COMMA type_specifier
@@ -489,6 +512,18 @@ parameter_list : parameter_list COMMA type_specifier ID
 
 					params.insert(SymbolInfo::getVariableSymbol("", $3->getName()));
 					fprintf(logout, "parameter_list  : parameter_list COMMA type_specifier\n");
+				
+					if($1->error){
+						$$->error = true;
+						$$->children = NULL;
+						$$->leftPart = "parameter_list";
+						$$->rightPart = "error";
+						$$->isLeaf = true;
+
+						delete $1;
+						delete $2;
+						delete $3;
+					}
 				}
 				|
 				type_specifier ID
@@ -526,9 +561,9 @@ parameter_list : parameter_list COMMA type_specifier ID
 				|
 				error
 				{
-					fprintf(logout, "Line# %d: parameter_list: Syntax error1\n", line_count);
+					// fprintf(logout, "Line# %d: parameter_list: Syntax error1\n", line_count);
 					yyclearin ;
-					fprintf(logout, "Line# %d: parameter_list: Syntax error2\n", line_count);
+					// fprintf(logout, "Line# %d: parameter_list: Syntax error2\n", line_count);
 					SymbolInfo *tmp = new SymbolInfo("parameter_list", "parameter_list");
 					tmp->leftPart = "parameter_list";
 					tmp->rightPart = "error";
@@ -536,6 +571,8 @@ parameter_list : parameter_list COMMA type_specifier ID
 					tmp->endLine = line_count;
 					tmp->isLeaf = true;
 					tmp->children = NULL;
+
+					tmp->error = true;
 					
 					$$ = tmp;
 				}
@@ -606,11 +643,15 @@ var_declaration : type_specifier declaration_list SEMICOLON
 
 					fprintf(logout, "var_declaration : type_specifier declaration_list SEMICOLON  \n");
 
+					if($2->error){
+						fprintf(errorout, "Line# %d: Syntax error at declaration list of variable declaration\n", $1->startLine);
+					}
+
 					if($1->getName() == "VOID"){
 						error_count++;
 						string tempName = vars.head->getName();
 						fprintf(errorout, "Line# %d: Variable or field \'%s\' declared void\n", $1->startLine, tempName.c_str());
-					} else {
+					} else if(!$2->error){
 						SymbolInfo *cur = vars.head;
 						while(cur != NULL){
 							if(cur->getFlag() == 0){
@@ -696,6 +737,18 @@ declaration_list : declaration_list COMMA ID
 
 					vars.insert(SymbolInfo::getVariableSymbol($3->getName(), $3->getType()));
 					fprintf(logout, "declaration_list : declaration_list COMMA ID  \n");
+				 
+				 	if($1->error){
+						$$->error = true;
+						$$->isLeaf = true;
+						$$->children = NULL;
+						$$->leftPart = "declaration_list";
+						$$->rightPart = "error";
+
+						delete $1;
+						delete $2;
+						delete $3;
+					}
 				 }
                  | declaration_list COMMA ID LSQUARE CONST_INT RSQUARE
 				 {
@@ -716,6 +769,21 @@ declaration_list : declaration_list COMMA ID
 
 					vars.insert(SymbolInfo::getArrayTypeSymbol($3->getName(), $3->getType(), stoi($5->getName())));
 					fprintf(logout, "declaration_list : declaration_list COMMA ID LSQUARE CONST_INT RSQUARE \n");
+				 
+				 	if($1->error){
+						$$->error = true;
+						$$->isLeaf = true;
+						$$->children = NULL;
+						$$->leftPart = "declaration_list";
+						$$->rightPart = "error";
+
+						delete $1;
+						delete $2;
+						delete $3;
+						delete $4;
+						delete $5;
+						delete $6;
+					}
 				 }
                  | ID
 				 {
@@ -756,7 +824,9 @@ declaration_list : declaration_list COMMA ID
 					tmp->children = NULL;
 					$$ = tmp;
 
-					fprintf(logout, "Line# %d: declaration_list: Syntax error\n", line_count);
+					tmp->error = true;
+
+					// fprintf(logout, "Line# %d: declaration_list: Syntax error\n", line_count);
 					yyclearin;
 				}
                  ;
@@ -985,6 +1055,9 @@ expression_statement : SEMICOLON
 
 						$$ = tmp;
 						fprintf(logout, "expression_statement : expression SEMICOLON \t\t \n");
+					 	if($1->error){
+							fprintf(errorout, "Line# %d: Syntax error at expression of expression statement\n", $1->startLine);
+						}
 					 }
 
 variable : ID
@@ -1143,8 +1216,9 @@ expression : logic_expression
 				tmp->isLeaf = true;
 				tmp->children = NULL;
 				$$ = tmp;
-
-				fprintf(logout, "Line# %d: expression: Syntax error\n", line_count);
+				
+				tmp->error = true;
+				// fprintf(errorout, "Line# %d: Syntax error at expression of expression statement\n", line_count);
 			}
 		   ;
 

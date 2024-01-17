@@ -7,6 +7,8 @@ SymbolInfo::SymbolInfo(string name, string type, SymbolInfo *next)
     this->next = next;
     flag = 3;
     children = NULL;
+    isLeaf = false;
+    error = false;
 }
 
 SymbolInfo::SymbolInfo(string name, string type, int flag)
@@ -20,6 +22,8 @@ SymbolInfo::SymbolInfo(string name, string type, int flag)
     {
         params = new LinkedList();
     }
+    isLeaf = false;
+    error = false;
 }
 
 SymbolInfo::~SymbolInfo()
