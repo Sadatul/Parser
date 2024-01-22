@@ -16,7 +16,7 @@ echo 'Generated the parser.cpp file.'
 g++ -w -c -o ./bin/parser.o ./bin/parser.cpp
 echo 'Generated the parser object file.'
 
-flex -o ./bin/scanner.cpp Scanner.l
+flex -o ./bin/scanner.cpp 2005077_Scanner.l
 echo 'Generated the scanner.cpp file.'
 g++ -w -c -o ./bin/scanner.o ./bin/scanner.cpp
 echo 'Generated the scanner object file.'

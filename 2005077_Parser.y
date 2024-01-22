@@ -34,6 +34,9 @@ string funcReturnType = ""; // This is used to keep track of the return type of 
 string funcName = "";
 bool callAddFunction = false;
 
+bool paramErrorFlag = false; // If error occurs in a param declaration...this prevents us 
+							// from adding anymore symbols to the symbol table.
+
 void yyerror(char *s){
 	error_count++;
 	fprintf(logout, "Error at line no %d : %s\n", line_count, s);
@@ -226,6 +229,7 @@ func_declaration : type_specifier ID LPAREN parameter_list RPAREN SEMICOLON
 					}
 					params.clear();
 					// symbolTable->printAllScopeTableInFile(logout);
+					paramErrorFlag = false;
 				 }
 				 |
 				 type_specifier ID LPAREN RPAREN SEMICOLON
@@ -377,7 +381,7 @@ func_definition : type_specifier ID LPAREN parameter_list RPAREN
 					callAddFunction = false;
 					funcName = "";
 					params.clear();
-
+					paramErrorFlag = false;
 				}
 				|
 				type_specifier ID LPAREN RPAREN
@@ -447,6 +451,7 @@ func_definition : type_specifier ID LPAREN parameter_list RPAREN
 					callAddFunction = false;
 					funcName = "";
 					params.clear();
+					paramErrorFlag = false;
 				}
 				;
 parameter_list : parameter_list COMMA type_specifier ID
@@ -476,8 +481,10 @@ parameter_list : parameter_list COMMA type_specifier ID
 					if(errorFlag){
 						error_count++;
 						fprintf(errorout, "Line# %d: Redefinition of parameter \'%s\'\n", $4->startLine, $4->getName().c_str());
-						
-					} else {
+						paramErrorFlag = true;
+					} else if(!paramErrorFlag){
+						// We only insert a param if we are confimed no erro has occured
+						// in the previous param declaration.
 						params.insert(SymbolInfo::getVariableSymbol($4->getName(), $3->getName()));
 					}
 					fprintf(logout, "parameter_list  : parameter_list COMMA type_specifier ID\n");
@@ -1023,7 +1030,16 @@ statement : var_declaration
 			fprintf(logout, "statement : RETURN expression SEMICOLON\n");
 		  
 		  	// Need to do error checking here.
-			
+			// if(funcReturnType == "" || funcReturnType == "VOID"){
+			// 	error_count++;
+			//  	fprintf(errorout, "Line# %d: RETURN not allowed here.\n", $1->startLine);
+			// }
+			// else {
+			//  	if(funcReturnType != $2->dType){
+			//  		error_count++;
+			//  		fprintf(errorout, "Line# %d: Conflicting return type for function.\n", $1->startLine);
+			//  	}
+			// }
 
 		  }
 		  ;
@@ -1586,6 +1602,12 @@ factor : variable
 				fprintf(errorout, "Line# %d: Inconsistent function call.\n", $1->startLine);
 			}
 			else{
+				// As per specs void functions can't be called.
+				// if(check->getType() == "VOID"){
+				// 	error_count++;
+				// 	fprintf(errorout, "Line# %d: Void functions can't be called.\n", $1->startLine);
+				// }
+
 				if(check->params->getLength() > args.getLength()){
 					error_count++;
 					fprintf(errorout, "Line# %d: Too few arguments to function \'%s\'\n", $1->startLine, $1->getName().c_str());
@@ -1828,6 +1850,7 @@ int main(int argc,char *argv[]){
     /* Total lines: 16
 Total errors: 14
 Total warnings: 0 */
+	/* symbolTable->printAllScopeTableInFile(logout); */
   	fprintf(logout, "Total Lines: %d\n", line_count); 
     fprintf(logout, "Total Errors: %d\n", error_count); 
     /* fprintf(logout, "Total warnings: %d\n", warning_count);  */
