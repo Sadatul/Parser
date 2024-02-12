@@ -332,6 +332,7 @@ println {
     tmp->isLeaf = true;
     tmp->startLine = line_count;
     tmp->endLine = line_count;
+    yylval.symbol = tmp;
     // fprintf(tokenout,"<DECOP, %s>\n", yytext);
     fprintf(logout, "Line# %d: Token <DECOP> Lexeme %s found\n", line_count, yytext);
     return DECOP;

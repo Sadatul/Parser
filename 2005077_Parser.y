@@ -83,6 +83,7 @@ void freeParseTree(SymbolInfo *root){
 		freeParseTree(tmp);
 		tmp = tmp->next;
 	}
+	printf("%s deleted\n", root->getName().c_str());
 	delete root;
 }
 
